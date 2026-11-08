@@ -8,8 +8,17 @@
 
 import { AI_CONFIG } from '../config/supabaseConfig.js';
 
-const LOCAL_STORAGE_GEMINI_KEY = 'bike_workshop_gemini_key';
+// Clean up any legacy API key in localStorage
+try {
+  localStorage.removeItem('bike_workshop_gemini_key');
+} catch (e) {
+  // ignore
+}
 
+/**
+ * Resolves Gemini API key purely from the dedicated config file or .env variables.
+ * Zero API keys are stored in or accepted from browser localStorage.
+ */
 export function getStoredGeminiKey() {
   // 1. Check hardcoded configuration in src/config/supabaseConfig.js
   if (
@@ -34,29 +43,7 @@ export function getStoredGeminiKey() {
     return { key: envKey.trim(), source: 'env' };
   }
 
-  // 3. Check browser localStorage
-  try {
-    const local = localStorage.getItem(LOCAL_STORAGE_GEMINI_KEY);
-    if (local && local.trim() !== '') {
-      return { key: local.trim(), source: 'local' };
-    }
-  } catch (e) {
-    // ignore
-  }
-
   return null;
-}
-
-export function saveStoredGeminiKey(key) {
-  try {
-    if (!key) {
-      localStorage.removeItem(LOCAL_STORAGE_GEMINI_KEY);
-    } else {
-      localStorage.setItem(LOCAL_STORAGE_GEMINI_KEY, key.trim());
-    }
-  } catch (e) {
-    // ignore
-  }
 }
 
 /**

@@ -1,15 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from '../config/supabaseConfig.js';
 
-// Configuration keys in localStorage (Production Ready - Zero Dummy Data)
+// Configuration keys in localStorage (Only user workshop preferences & clean production data)
 const LOCAL_STORAGE_PARTS_KEY = 'bike_workshop_parts_prod';
 const LOCAL_STORAGE_INVOICES_KEY = 'bike_workshop_invoices_prod';
 const LOCAL_STORAGE_WORKSHOP_KEY = 'bike_workshop_config_prod';
-const LOCAL_STORAGE_SUPABASE_CREDENTIALS = 'bike_workshop_supabase_credentials';
+
+// Clean up any legacy API keys that may have been stored in localStorage previously
+try {
+  localStorage.removeItem('bike_workshop_supabase_credentials');
+  localStorage.removeItem('bike_workshop_gemini_key');
+} catch (e) {
+  // ignore
+}
 
 // Initial stock data starts completely clean for production
 const DEFAULT_PARTS = [];
 
+/**
+ * Resolves Supabase credentials purely from the dedicated config file or .env variables.
+ * Zero API keys are stored in or accepted from browser localStorage.
+ */
 export function getStoredSupabaseCredentials() {
   // 1. Check hardcoded configuration in src/config/supabaseConfig.js
   if (
@@ -39,27 +50,7 @@ export function getStoredSupabaseCredentials() {
     return { url: envUrl.trim(), key: envKey.trim(), source: 'env' };
   }
 
-  // 3. Check browser localStorage
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_SUPABASE_CREDENTIALS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.url && parsed.key) {
-        return { url: parsed.url, key: parsed.key, source: 'local' };
-      }
-    }
-  } catch (err) {
-    console.error('Error reading Supabase credentials from localStorage:', err);
-  }
   return null;
-}
-
-export function saveSupabaseCredentials(url, key) {
-  if (!url || !key) {
-    localStorage.removeItem(LOCAL_STORAGE_SUPABASE_CREDENTIALS);
-  } else {
-    localStorage.setItem(LOCAL_STORAGE_SUPABASE_CREDENTIALS, JSON.stringify({ url: url.trim(), key: key.trim() }));
-  }
 }
 
 let supabaseInstance = null;
@@ -323,10 +314,6 @@ export async function fetchInvoices() {
 
 /**
  * Creates an invoice with atomic stock reduction.
- * 1. Checks available stock before deducting.
- * 2. Never reduces stock before invoice confirmation.
- * 3. Never reduces stock twice for the same invoice.
- * 4. Never allows stock to become negative.
  */
 export async function createInvoiceWithStockDeduction({
   vehicleNumber,
@@ -360,10 +347,8 @@ export async function createInvoiceWithStockDeduction({
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
-      // Generate invoice number
       const invoiceNumber = 'INV-' + Date.now().toString().slice(-6);
 
-      // Check if stored RPC procedure exists in Supabase
       const rpcPayload = {
         p_invoice_number: invoiceNumber,
         p_vehicle_number: cleanVehicle,
@@ -384,7 +369,6 @@ export async function createInvoiceWithStockDeduction({
       );
 
       if (!rpcErr && rpcData && rpcData.success) {
-        // Fetch created invoice with items
         const { data: invData } = await supabase
           .from('invoices')
           .select('*, items:invoice_items(*)')
@@ -407,8 +391,7 @@ export async function createInvoiceWithStockDeduction({
         };
       }
 
-      // If RPC is not installed, perform transaction-like check and insert in Supabase
-      // 1. Verify part stocks
+      // Supabase manual transaction fallback
       for (const item of items) {
         if (item.item_type === 'part' && item.part_id) {
           const { data: part, error: pErr } = await supabase
@@ -427,7 +410,6 @@ export async function createInvoiceWithStockDeduction({
         }
       }
 
-      // 2. Insert invoice
       const { data: newInv, error: invErr } = await supabase
         .from('invoices')
         .insert([
@@ -443,7 +425,6 @@ export async function createInvoiceWithStockDeduction({
         .single();
       if (invErr) throw invErr;
 
-      // 3. Insert items and deduct stock
       const insertItems = items.map((it) => ({
         invoice_id: newInv.id,
         part_id: it.part_id || null,
@@ -456,7 +437,6 @@ export async function createInvoiceWithStockDeduction({
       const { error: itemsErr } = await supabase.from('invoice_items').insert(insertItems);
       if (itemsErr) throw itemsErr;
 
-      // Deduct stock for each part
       for (const it of items) {
         if (it.item_type === 'part' && it.part_id) {
           const { data: part } = await supabase
@@ -486,10 +466,9 @@ export async function createInvoiceWithStockDeduction({
     }
   }
 
-  // ---------------- Local Storage Implementation ----------------
+  // Local Storage fallback
   const localParts = getLocalParts();
 
-  // 1. Verify stock availability for all parts
   for (const item of items) {
     if (item.item_type === 'part' && item.part_id) {
       const part = localParts.find((p) => String(p.id) === String(item.part_id));
@@ -505,7 +484,6 @@ export async function createInvoiceWithStockDeduction({
     }
   }
 
-  // 2. Reduce stock for each part item (Stock never negative)
   for (const item of items) {
     if (item.item_type === 'part' && item.part_id) {
       const part = localParts.find((p) => String(p.id) === String(item.part_id));
@@ -516,7 +494,6 @@ export async function createInvoiceWithStockDeduction({
   }
   saveLocalParts(localParts);
 
-  // 3. Generate sequential invoice number
   const invoices = getLocalInvoices();
   const nextNum = 1000 + invoices.length + 1;
   const invoiceNumber = `INV-${nextNum}`;
@@ -553,7 +530,6 @@ export async function cancelInvoice(invoiceId) {
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
-      // Try stored RPC first
       const { data: rpcData, error: rpcErr } = await supabase.rpc('cancel_invoice', {
         p_invoice_id: invoiceId,
       });
@@ -562,7 +538,6 @@ export async function cancelInvoice(invoiceId) {
         return { success: true, source: 'supabase' };
       }
 
-      // Supabase manual cancellation & stock restore
       const { data: invoice, error: invErr } = await supabase
         .from('invoices')
         .select('*, items:invoice_items(*)')
@@ -577,7 +552,6 @@ export async function cancelInvoice(invoiceId) {
         return { success: false, error: 'Invoice has already been cancelled.' };
       }
 
-      // Restore parts stock
       if (invoice.items) {
         for (const item of invoice.items) {
           if (item.item_type === 'part' && item.part_id) {
@@ -612,7 +586,6 @@ export async function cancelInvoice(invoiceId) {
     return { success: false, error: 'This invoice is already cancelled.' };
   }
 
-  // Restore stock
   const parts = getLocalParts();
   for (const item of invoice.items || []) {
     if (item.item_type === 'part' && item.part_id) {
@@ -624,7 +597,6 @@ export async function cancelInvoice(invoiceId) {
   }
   saveLocalParts(parts);
 
-  // Mark invoice as cancelled
   invoice.invoice_status = 'cancelled';
   saveLocalInvoices(invoices);
 
