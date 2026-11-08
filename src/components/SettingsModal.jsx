@@ -214,6 +214,28 @@ export default function SettingsModal({
               {t.settings.supabaseHelp}
             </p>
 
+            {storedCreds?.source === 'hardcoded_file' && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>
+                  {lang === 'ml'
+                    ? 'src/config/supabaseConfig.js വഴി ഓട്ടോമാറ്റിക്കായി കണക്റ്റ് ചെയ്തു'
+                    : 'Auto-connected via src/config/supabaseConfig.js'}
+                </span>
+              </div>
+            )}
+
+            {storedCreds?.source === 'env' && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>
+                  {lang === 'ml'
+                    ? '.env വഴി ഓട്ടോമാറ്റിക്കായി കണക്റ്റ് ചെയ്തു'
+                    : 'Auto-connected via .env / Cloudflare environment'}
+                </span>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
                 {t.settings.projectUrl}

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_CONFIG } from '../config/supabaseConfig.js';
 
 // Configuration keys in localStorage (Production Ready - Zero Dummy Data)
 const LOCAL_STORAGE_PARTS_KEY = 'bike_workshop_parts_prod';
@@ -10,11 +11,35 @@ const LOCAL_STORAGE_SUPABASE_CREDENTIALS = 'bike_workshop_supabase_credentials';
 const DEFAULT_PARTS = [];
 
 export function getStoredSupabaseCredentials() {
+  // 1. Check hardcoded configuration in src/config/supabaseConfig.js
+  if (
+    SUPABASE_CONFIG?.SUPABASE_URL &&
+    SUPABASE_CONFIG?.SUPABASE_ANON_KEY &&
+    SUPABASE_CONFIG.SUPABASE_URL.trim() !== '' &&
+    SUPABASE_CONFIG.SUPABASE_ANON_KEY.trim() !== '' &&
+    !SUPABASE_CONFIG.SUPABASE_URL.includes('your-project')
+  ) {
+    return {
+      url: SUPABASE_CONFIG.SUPABASE_URL.trim(),
+      key: SUPABASE_CONFIG.SUPABASE_ANON_KEY.trim(),
+      source: 'hardcoded_file',
+    };
+  }
+
+  // 2. Check environment variables (.env or Cloudflare Pages env)
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : undefined;
   const envKey = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : undefined;
-  if (envUrl && envKey && envUrl !== 'YOUR_SUPABASE_URL') {
-    return { url: envUrl, key: envKey, source: 'env' };
+  if (
+    envUrl &&
+    envKey &&
+    envUrl.trim() !== '' &&
+    envUrl !== 'YOUR_SUPABASE_URL' &&
+    !envUrl.includes('your-project-id')
+  ) {
+    return { url: envUrl.trim(), key: envKey.trim(), source: 'env' };
   }
+
+  // 3. Check browser localStorage
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SUPABASE_CREDENTIALS);
     if (raw) {
