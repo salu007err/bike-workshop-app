@@ -3,14 +3,11 @@ import {
   X,
   Bot,
   Send,
-  Sparkles,
   Database,
   Trash2,
-  CheckCircle2,
   HelpCircle,
-  Key,
 } from 'lucide-react';
-import { queryAIAssistant, getStoredGeminiKey, saveStoredGeminiKey } from '../services/aiAgent';
+import { queryAIAssistant, getStoredGeminiKey } from '../services/aiAgent';
 
 export default function AIAssistantModal({
   isOpen,
@@ -30,11 +27,10 @@ export default function AIAssistantModal({
   ]);
   const [inputQuery, setInputQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showKeySetting, setShowKeySetting] = useState(false);
-  const [geminiKey, setGeminiKey] = useState(getStoredGeminiKey());
-  const [keySavedMsg, setKeySavedMsg] = useState('');
 
   const messagesEndRef = useRef(null);
+  const geminiInfo = getStoredGeminiKey();
+  const hasGeminiKey = !!(typeof geminiInfo === 'string' ? geminiInfo : geminiInfo?.key);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -112,18 +108,6 @@ export default function AIAssistantModal({
     }
   };
 
-  const handleSaveKey = (e) => {
-    e.preventDefault();
-    saveStoredGeminiKey(geminiKey);
-    setKeySavedMsg(
-      lang === 'ml'
-        ? 'Gemini കീ സേവ് ചെയ്തു!'
-        : 'Gemini API Key saved successfully!'
-    );
-    setTimeout(() => setKeySavedMsg(''), 3000);
-    setShowKeySetting(false);
-  };
-
   const handleClearChat = () => {
     setMessages([
       {
@@ -160,13 +144,6 @@ export default function AIAssistantModal({
 
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setShowKeySetting(!showKeySetting)}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title={t.aiAgent.geminiOption}
-            >
-              <Key className="w-4 h-4" />
-            </button>
-            <button
               onClick={handleClearChat}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               title="Clear chat"
@@ -193,48 +170,9 @@ export default function AIAssistantModal({
           </div>
 
           <div className="text-[11px] text-slate-500 hidden sm:inline">
-            {geminiKey ? 'Gemini 1.5 Flash Active' : 'Built-in Workshop AI'}
+            {hasGeminiKey ? 'Gemini 1.5 Flash Connected' : 'Built-in Workshop AI'}
           </div>
         </div>
-
-        {/* Optional Gemini Key Input Panel */}
-        {showKeySetting && (
-          <div className="bg-indigo-50 border-b border-indigo-100 p-4 animate-in fade-in text-xs space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-indigo-950 flex items-center gap-1">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                {t.aiAgent.geminiOption}
-              </span>
-              <button
-                onClick={() => setShowKeySetting(false)}
-                className="text-indigo-600 font-bold hover:underline"
-              >
-                Close
-              </button>
-            </div>
-            <p className="text-indigo-800 leading-relaxed">
-              {t.aiAgent.geminiHelp}
-            </p>
-            <form onSubmit={handleSaveKey} className="flex gap-2">
-              <input
-                type="password"
-                value={geminiKey}
-                onChange={(e) => setGeminiKey(e.target.value)}
-                placeholder="AIzaSy..."
-                className="flex-1 px-3 py-1.5 rounded-xl border border-indigo-300 font-mono text-xs focus:outline-none bg-white"
-              />
-              <button
-                type="submit"
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl"
-              >
-                Save
-              </button>
-            </form>
-            {keySavedMsg && (
-              <span className="text-emerald-700 font-semibold block">{keySavedMsg}</span>
-            )}
-          </div>
-        )}
 
         {/* Chat Messages Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
@@ -295,7 +233,7 @@ export default function AIAssistantModal({
                 type="button"
                 onClick={() => handleSend(q)}
                 disabled={isLoading}
-                className="text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 transition-colors"
+                className="text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 transition-colors cursor-pointer"
               >
                 {q}
               </button>
@@ -322,7 +260,7 @@ export default function AIAssistantModal({
           <button
             type="submit"
             disabled={!inputQuery.trim() || isLoading}
-            className="p-3 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+            className="p-3 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
             aria-label="Send"
           >
             <Send className="w-5 h-5" />

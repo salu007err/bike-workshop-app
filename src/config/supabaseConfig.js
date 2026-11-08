@@ -1,22 +1,19 @@
 /**
  * =========================================================================
- * SUPABASE CLIENT CONFIGURATION
+ * WORKSHOP APP CONFIGURATION (SUPABASE + GEMINI AI)
  * =========================================================================
  * 
- * Paste your Supabase credentials here so the app works automatically
+ * Paste your credentials here so the app works automatically
  * for the workshop owner with ZERO manual setup in the browser!
  * 
- * How to get your keys (100% Free):
- * 1. Log into your Supabase dashboard: https://supabase.com/dashboard
- * 2. Select your project (e.g. "bike-workshop")
- * 3. Go to: Settings (gear icon) -> API
- * 4. Copy "Project URL" and paste below in SUPABASE_URL.
- * 5. Copy "anon public key" and paste below in SUPABASE_ANON_KEY.
+ * 1. SUPABASE (Database):
+ * • Log in: https://supabase.com/dashboard
+ * • Go to: Settings -> API
+ * • Copy "Project URL" and "anon public key" (DO NOT use service_role key)
  * 
- * IMPORTANT SECURITY NOTE:
- * • Use ONLY the "anon" (public) key here.
- * • NEVER use or paste the "service_role" secret key. The "anon" key is
- *   specifically meant for client-side applications with Row-Level Security.
+ * 2. GOOGLE GEMINI AI (Optional Free Tier):
+ * • Get a free key: https://aistudio.google.com/app/apikey
+ * • Paste below in GEMINI_API_KEY (or use .env file)
  */
 
 export const SUPABASE_CONFIG = {
@@ -25,4 +22,10 @@ export const SUPABASE_CONFIG = {
 
   // Paste your Anon Public Key here (e.g. 'eyJhbGciOiJIUzI1NiIsInR5cCI6...')
   SUPABASE_ANON_KEY: '',
+};
+
+export const AI_CONFIG = {
+  // Optional: Paste your free Google Gemini API Key here (e.g. 'AIzaSy...')
+  // If left empty, the built-in free workshop AI is used automatically at 0 cost!
+  GEMINI_API_KEY: '',
 };

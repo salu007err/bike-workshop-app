@@ -6,16 +6,45 @@
  * 2. Optional Google Gemini Free Tier API (If user adds free Gemini key in settings)
  */
 
+import { AI_CONFIG } from '../config/supabaseConfig.js';
+
 const LOCAL_STORAGE_GEMINI_KEY = 'bike_workshop_gemini_key';
 
 export function getStoredGeminiKey() {
-  const envKey = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined;
-  if (envKey && envKey !== 'YOUR_GEMINI_KEY') return envKey;
-  try {
-    return localStorage.getItem(LOCAL_STORAGE_GEMINI_KEY) || '';
-  } catch (e) {
-    return '';
+  // 1. Check hardcoded configuration in src/config/supabaseConfig.js
+  if (
+    AI_CONFIG?.GEMINI_API_KEY &&
+    AI_CONFIG.GEMINI_API_KEY.trim() !== '' &&
+    !AI_CONFIG.GEMINI_API_KEY.includes('your-gemini')
+  ) {
+    return { key: AI_CONFIG.GEMINI_API_KEY.trim(), source: 'config' };
   }
+
+  // 2. Check environment variables (.env or Cloudflare Pages)
+  const envKey =
+    typeof import.meta !== 'undefined' && import.meta.env
+      ? import.meta.env.VITE_GEMINI_API_KEY
+      : undefined;
+  if (
+    envKey &&
+    envKey.trim() !== '' &&
+    envKey !== 'YOUR_GEMINI_KEY' &&
+    !envKey.includes('your-gemini')
+  ) {
+    return { key: envKey.trim(), source: 'env' };
+  }
+
+  // 3. Check browser localStorage
+  try {
+    const local = localStorage.getItem(LOCAL_STORAGE_GEMINI_KEY);
+    if (local && local.trim() !== '') {
+      return { key: local.trim(), source: 'local' };
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return null;
 }
 
 export function saveStoredGeminiKey(key) {
@@ -229,7 +258,8 @@ export function processBuiltInAIQuery(userQuery, parts = [], invoices = [], lang
  * Otherwise, uses the Built-in Zero-Key Assistant.
  */
 export async function queryAIAssistant({ userQuery, parts = [], invoices = [], lang = 'en' }) {
-  const geminiKey = getStoredGeminiKey();
+  const geminiInfo = getStoredGeminiKey();
+  const geminiKey = typeof geminiInfo === 'string' ? geminiInfo : geminiInfo?.key;
 
   // If Gemini Key is present, call Google Gemini API with live data context
   if (geminiKey) {
