@@ -461,8 +461,8 @@ export async function createInvoiceWithStockDeduction({
         source: 'supabase',
       };
     } catch (err) {
-      console.warn('Supabase invoice creation failed, falling back to local storage:', err.message);
-      return { success: false, error: err.message };
+      console.warn('Supabase invoice creation failed, using local storage fallback:', err.message);
+      // Continue to local storage fallback
     }
   }
 
