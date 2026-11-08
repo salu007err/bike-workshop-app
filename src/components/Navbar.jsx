@@ -1,9 +1,10 @@
 import React from 'react';
-import { Wrench, Settings, Database, CheckCircle2, Globe } from 'lucide-react';
+import { Wrench, Settings, Database, CheckCircle2, Globe, Bot } from 'lucide-react';
 
 export default function Navbar({
   workshopConfig,
   onOpenSettings,
+  onOpenAIAssistant,
   isSupabaseConnected,
   lang,
   onToggleLanguage,
@@ -27,6 +28,16 @@ export default function Navbar({
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* AI Assistant Button */}
+          <button
+            onClick={onOpenAIAssistant}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-950/80 text-blue-300 hover:bg-blue-900 active:scale-95 text-xs font-bold border border-blue-700/60 transition-all cursor-pointer shadow-sm"
+            title={t.aiAgent.floatingBtn}
+          >
+            <Bot className="w-4 h-4 text-blue-400" />
+            <span className="font-bold">AI Help</span>
+          </button>
+
           {/* Language Switcher Pill */}
           <button
             onClick={onToggleLanguage}

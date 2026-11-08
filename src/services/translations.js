@@ -190,6 +190,29 @@ export const translations = {
       'Fork Oil & Seal Work',
       'Wiring & Electrical Check',
     ],
+    aiAgent: {
+      floatingBtn: 'AI Assistant (Help)',
+      title: 'Workshop AI Assistant',
+      subtitle: 'Clears app doubts & answers questions with live workshop data',
+      liveDataConnected: 'Live Data Connected',
+      partsCount: 'parts',
+      invoicesCount: 'bills',
+      welcomeMessage:
+        'Hello! I am your free Bike Workshop AI Assistant. Ask me how to use the app, or ask about your live stock and past bills!',
+      suggestedQuestions: [
+        'How do I create an invoice?',
+        'What parts are out of stock?',
+        'What is my total stock value?',
+        'How does WhatsApp sharing work?',
+      ],
+      placeholder: 'Ask any doubt (e.g. How to make a bill? Stock status?)...',
+      send: 'Send',
+      poweredBy: '100% Free AI • Instant Answers • Live Data Access',
+      geminiOption: 'Optional Free Gemini API Key',
+      geminiHelp:
+        'Get a free key from Google AI Studio (aistudio.google.com) or leave blank to use the built-in free AI.',
+      saveGemini: 'Save Gemini Key',
+    },
   },
 
   ml: {
@@ -380,6 +403,29 @@ export const translations = {
       'ഫോർക്ക് ഓയിൽ & സീൽ (Fork Work)',
       'വയറിംഗ് & ഇലക്ട്രിക്കൽ (Wiring Check)',
     ],
+    aiAgent: {
+      floatingBtn: 'AI അസിസ്റ്റന്റ് (സഹായം)',
+      title: 'വർക്ക്ഷോപ്പ് AI അസിസ്റ്റന്റ്',
+      subtitle: 'ആപ്പ് സംശയങ്ങൾ തീർക്കാനും സ്റ്റോക്ക് വിവരങ്ങൾ അറിയാനും',
+      liveDataConnected: 'തത്സമയ ഡാറ്റ കണക്റ്റഡ്',
+      partsCount: 'പാർട്സുകൾ',
+      invoicesCount: 'ബില്ലുകൾ',
+      welcomeMessage:
+        'നമസ്കാരം! ഞാൻ നിങ്ങളുടെ സൗജന്യ AI സഹായിയാണ്. ആപ്പ് ഉപയോഗിക്കുന്നതിനെക്കുറിച്ചുള്ള സംശയങ്ങളോ നിലവിലെ സ്റ്റോക്ക് വിവരങ്ങളോ ചോദിക്കാം!',
+      suggestedQuestions: [
+        'ബിൽ എങ്ങനെ ഉണ്ടാക്കാം?',
+        'സ്റ്റോക്ക് തീർന്ന പാർട്സുകൾ ഏതൊക്കെ?',
+        'ആകെ സ്റ്റോക്കിന്റെ വില എത്ര?',
+        'വാട്സാപ്പിൽ ബിൽ അയക്കുന്നത് എങ്ങനെ?',
+      ],
+      placeholder: 'സംശയം ചോദിക്കുക (ഉദാ: ബിൽ ഉണ്ടാക്കുന്ന വിധം, സ്റ്റോക്ക് വിവരം)...',
+      send: 'ചോദിക്കുക',
+      poweredBy: '100% സൗജന്യ AI • തത്സമയ ഡാറ്റ ആക്സസ്',
+      geminiOption: 'സൗജന്യ Gemini API Key (വേണമെങ്കിൽ മാത്രം)',
+      geminiHelp:
+        'Google AI Studio ൽ നിന്ന് സൗജന്യ കീ ചേർക്കാം. കീ ഇല്ലെങ്കിലും ബിൽറ്റ്-ഇൻ AI പൂർണ്ണമായി പ്രവർത്തിക്കും.',
+      saveGemini: 'Gemini കീ സേവ് ചെയ്യുക',
+    },
   },
 };
 
