@@ -1,7 +1,14 @@
 import React from 'react';
-import { Wrench, Settings, Database, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Wrench, Settings, Database, CheckCircle2, Globe } from 'lucide-react';
 
-export default function Navbar({ workshopConfig, onOpenSettings, isSupabaseConnected }) {
+export default function Navbar({
+  workshopConfig,
+  onOpenSettings,
+  isSupabaseConnected,
+  lang,
+  onToggleLanguage,
+  t,
+}) {
   return (
     <header className="bg-slate-900 text-white shadow-md border-b border-slate-800 no-print">
       <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -13,11 +20,25 @@ export default function Navbar({ workshopConfig, onOpenSettings, isSupabaseConne
             <h1 className="text-xl md:text-2xl font-black tracking-wide leading-tight text-white">
               {workshopConfig.workshopName || 'BIKE WORKSHOP'}
             </h1>
-            <p className="text-xs text-slate-400 font-medium">Simple Stock & Invoice App</p>
+            <p className="text-xs text-slate-400 font-medium">
+              {t.nav.subtitle}
+            </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Language Switcher Pill */}
+          <button
+            onClick={onToggleLanguage}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs border border-slate-700 transition-all cursor-pointer shadow-sm"
+            title={lang === 'en' ? 'മലയാളത്തിലേക്ക് മാറ്റുക' : 'Switch to English'}
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-extrabold text-emerald-400">
+              {lang === 'en' ? 'മലയാളം' : 'English'}
+            </span>
+          </button>
+
           {/* Cloud / Local storage indicator */}
           <div
             className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -30,12 +51,12 @@ export default function Navbar({ workshopConfig, onOpenSettings, isSupabaseConne
             {isSupabaseConnected ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Supabase Live</span>
+                <span>{t.nav.supabaseLive}</span>
               </>
             ) : (
               <>
                 <Database className="w-3.5 h-3.5 text-slate-400" />
-                <span>Local Offline</span>
+                <span>{t.nav.localOffline}</span>
               </>
             )}
           </div>
@@ -44,11 +65,11 @@ export default function Navbar({ workshopConfig, onOpenSettings, isSupabaseConne
           <button
             onClick={onOpenSettings}
             className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-slate-300 hover:text-white border border-slate-700 flex items-center gap-1.5 text-xs font-medium"
-            title="Workshop Settings & Cloud Database"
+            title={t.nav.settings}
             aria-label="Settings"
           >
             <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Settings</span>
+            <span className="hidden sm:inline">{t.nav.settings}</span>
           </button>
         </div>
       </div>

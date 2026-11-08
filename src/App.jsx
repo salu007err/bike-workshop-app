@@ -19,8 +19,28 @@ import {
   saveWorkshopConfig,
   getSupabaseClient,
 } from './services/db';
+import {
+  translations,
+  getStoredLanguage,
+  saveStoredLanguage,
+} from './services/translations';
 
 export default function App() {
+  // Language State: 'en' (English) | 'ml' (മലയാളം)
+  const [lang, setLang] = useState(getStoredLanguage());
+  const t = translations[lang] || translations.en;
+
+  const handleToggleLanguage = () => {
+    const nextLang = lang === 'en' ? 'ml' : 'en';
+    setLang(nextLang);
+    saveStoredLanguage(nextLang);
+  };
+
+  const handleSelectLanguage = (newLang) => {
+    setLang(newLang);
+    saveStoredLanguage(newLang);
+  };
+
   // Navigation: 'home' | 'stock' | 'invoice' | 'history'
   const [currentSection, setCurrentSection] = useState('home');
 
@@ -29,7 +49,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
 
-  // Data states
+  // Data states (Zero Dummy Data - Clean Production Ready)
   const [parts, setParts] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [isLoadingParts, setIsLoadingParts] = useState(true);
@@ -56,7 +76,7 @@ export default function App() {
     try {
       const partsRes = await fetchParts();
       if (partsRes.success) {
-        setParts(partsRes.data);
+        setParts(partsRes.data || []);
       }
     } catch (err) {
       console.error('Error loading parts:', err);
@@ -67,7 +87,7 @@ export default function App() {
     try {
       const invRes = await fetchInvoices();
       if (invRes.success) {
-        setInvoices(invRes.data);
+        setInvoices(invRes.data || []);
       }
     } catch (err) {
       console.error('Error loading invoices:', err);
@@ -82,40 +102,52 @@ export default function App() {
   const handleAddPart = async (partData) => {
     const res = await addPart(partData);
     if (res.success) {
-      showToast(`Added part "${partData.name}"`);
+      showToast(
+        lang === 'ml'
+          ? `"${partData.name}" സ്റ്റോക്കിലേക്ക് ചേർത്തു`
+          : `Added part "${partData.name}"`
+      );
       await loadData();
     } else {
-      showToast(res.error || 'Failed to add part', 'error');
+      showToast(res.error || (lang === 'ml' ? 'പാർട്ട് ചേർക്കാൻ കഴിഞ്ഞില്ല' : 'Failed to add part'), 'error');
     }
   };
 
   const handleUpdatePart = async (id, partData) => {
     const res = await updatePart(id, partData);
     if (res.success) {
-      showToast(`Updated part "${partData.name}"`);
+      showToast(
+        lang === 'ml'
+          ? `"${partData.name}" വിവരങ്ങൾ മാറ്റി`
+          : `Updated part "${partData.name}"`
+      );
       await loadData();
     } else {
-      showToast(res.error || 'Failed to update part', 'error');
+      showToast(res.error || (lang === 'ml' ? 'മാറ്റം വരുത്താൻ കഴിഞ്ഞില്ല' : 'Failed to update part'), 'error');
     }
   };
 
   const handleAddStock = async (id, addQty) => {
     const res = await addStockQuantity(id, addQty);
     if (res.success) {
-      showToast(`Added ${addQty} unit(s) to stock!`);
+      showToast(
+        lang === 'ml'
+          ? `${addQty} എണ്ണം സ്റ്റോക്കിലേക്ക് കൂട്ടി!`
+          : `Added ${addQty} unit(s) to stock!`
+      );
       await loadData();
     } else {
-      showToast(res.error || 'Failed to add stock', 'error');
+      showToast(res.error || (lang === 'ml' ? 'സ്റ്റോക്ക് കൂട്ടാൻ കഴിഞ്ഞില്ല' : 'Failed to add stock'), 'error');
     }
   };
 
   const handleDeletePart = async (id) => {
     const res = await deletePart(id);
     if (res.success) {
-      showToast('Part deleted from stock');
+      showToast(lang === 'ml' ? 'പാർട്ട് ഒഴിവാക്കി' : 'Part deleted from stock');
       await loadData();
     } else {
-      showToast(res.error || 'Failed to delete part', 'error');
+      showToast(res.error || (lang === 'ml' ? 'ഡിലീറ്റ് ചെയ്യാൻ കഴിഞ്ഞില്ല' : 'Failed to delete part'), 'error');
     }
   };
 
@@ -131,14 +163,18 @@ export default function App() {
       });
 
       if (res.success) {
-        showToast(`Invoice #${res.data.invoice_number} created! Stock updated.`);
+        showToast(
+          lang === 'ml'
+            ? `ബിൽ #${res.data.invoice_number} തയ്യാറായി! സ്റ്റോക്ക് കുറച്ചു.`
+            : `Invoice #${res.data.invoice_number} created! Stock updated.`
+        );
         // Reload parts and invoices so quantities reflect changes
         await loadData();
         // Open detail modal with download/print/WhatsApp options
         setActiveInvoice(res.data);
         return true;
       } else {
-        showToast(res.error || 'Failed to create invoice', 'error');
+        showToast(res.error || (lang === 'ml' ? 'ബിൽ ഉണ്ടാക്കാൻ കഴിഞ്ഞില്ല' : 'Failed to create invoice'), 'error');
         return false;
       }
     } catch (err) {
@@ -153,14 +189,18 @@ export default function App() {
   const handleCancelInvoice = async (invoiceId) => {
     const res = await cancelInvoice(invoiceId);
     if (res.success) {
-      showToast('Invoice cancelled! Deducted stock has been restored.');
+      showToast(
+        lang === 'ml'
+          ? 'ബിൽ റദ്ദാക്കി! പാർട്സുകൾ തിരികെ സ്റ്റോക്കിലേക്ക് ചേർത്തു.'
+          : 'Invoice cancelled! Deducted stock has been restored.'
+      );
       await loadData();
       // Update active invoice status in modal
       if (activeInvoice && activeInvoice.id === invoiceId) {
         setActiveInvoice((prev) => ({ ...prev, invoice_status: 'cancelled' }));
       }
     } else {
-      showToast(res.error || 'Failed to cancel invoice', 'error');
+      showToast(res.error || (lang === 'ml' ? 'ബിൽ റദ്ദാക്കാൻ കഴിഞ്ഞില്ല' : 'Failed to cancel invoice'), 'error');
     }
   };
 
@@ -176,6 +216,9 @@ export default function App() {
         workshopConfig={workshopConfig}
         onOpenSettings={() => setIsSettingsOpen(true)}
         isSupabaseConnected={isSupabaseConnected}
+        lang={lang}
+        onToggleLanguage={handleToggleLanguage}
+        t={t}
       />
 
       {/* Global Toast Alert */}
@@ -196,7 +239,10 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 pb-16">
         {currentSection === 'home' && (
-          <HomeView onSelectSection={(sec) => setCurrentSection(sec)} />
+          <HomeView
+            onSelectSection={(sec) => setCurrentSection(sec)}
+            t={t}
+          />
         )}
 
         {currentSection === 'stock' && (
@@ -208,6 +254,7 @@ export default function App() {
             onUpdatePart={handleUpdatePart}
             onDeletePart={handleDeletePart}
             onAddStock={handleAddStock}
+            t={t}
           />
         )}
 
@@ -218,6 +265,7 @@ export default function App() {
             onCreateInvoice={handleCreateInvoice}
             onViewHistory={() => setCurrentSection('history')}
             isCreating={isCreatingInvoice}
+            t={t}
           />
         )}
 
@@ -228,6 +276,7 @@ export default function App() {
             onBack={() => setCurrentSection('invoice')}
             onSelectInvoice={(inv) => setActiveInvoice(inv)}
             onCancelInvoice={handleCancelInvoice}
+            t={t}
           />
         )}
       </main>
@@ -235,8 +284,12 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-400 no-print">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>{workshopConfig.workshopName || 'BIKE WORKSHOP'} — Free Tier System</span>
-          <span className="text-slate-500 font-semibold">100% Free • No Subscription • 0 Cost</span>
+          <span>{workshopConfig.workshopName || 'BIKE WORKSHOP'}</span>
+          <span className="text-slate-500 font-semibold">
+            {lang === 'ml'
+              ? '100% സൗജന്യം • സബ്‌സ്‌ക്രിപ്ഷൻ ഇല്ല • ₹0 ചിലവ്'
+              : '100% Free • No Subscription • ₹0 Cost'}
+          </span>
         </div>
       </footer>
 
@@ -251,6 +304,8 @@ export default function App() {
           setActiveInvoice(null);
           setCurrentSection('invoice');
         }}
+        lang={lang}
+        t={t}
       />
 
       {/* Settings Modal */}
@@ -261,6 +316,9 @@ export default function App() {
         onSaveWorkshopConfig={handleSaveWorkshopConfig}
         isSupabaseConnected={isSupabaseConnected}
         onRefreshData={loadData}
+        lang={lang}
+        onSelectLanguage={handleSelectLanguage}
+        t={t}
       />
     </div>
   );

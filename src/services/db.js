@@ -1,22 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration keys in localStorage
-const LOCAL_STORAGE_PARTS_KEY = 'bike_workshop_parts_v1';
-const LOCAL_STORAGE_INVOICES_KEY = 'bike_workshop_invoices_v1';
-const LOCAL_STORAGE_WORKSHOP_KEY = 'bike_workshop_config_v1';
+// Configuration keys in localStorage (Production Ready - Zero Dummy Data)
+const LOCAL_STORAGE_PARTS_KEY = 'bike_workshop_parts_prod';
+const LOCAL_STORAGE_INVOICES_KEY = 'bike_workshop_invoices_prod';
+const LOCAL_STORAGE_WORKSHOP_KEY = 'bike_workshop_config_prod';
 const LOCAL_STORAGE_SUPABASE_CREDENTIALS = 'bike_workshop_supabase_credentials';
 
-// Initial default stock data for small bike workshop
-const DEFAULT_PARTS = [
-  { id: 'p1', name: 'Engine Oil 4T 20W40 (1L)', price: 450, quantity: 12, note: 'Standard 4T engine oil' },
-  { id: 'p2', name: 'Brake Shoe (Rear)', price: 180, quantity: 8, note: 'Drum brake shoe' },
-  { id: 'p3', name: 'Spark Plug (Standard)', price: 120, quantity: 15, note: 'Standard spark plug' },
-  { id: 'p4', name: 'Chain Lube Spray (150ml)', price: 220, quantity: 6, note: 'Chain lubrication' },
-  { id: 'p5', name: 'Air Filter Element', price: 160, quantity: 9, note: 'Air cleaner element' },
-  { id: 'p6', name: 'Front Disc Brake Pads', price: 280, quantity: 5, note: 'Disc brake pads' },
-  { id: 'p7', name: 'Clutch Cable', price: 140, quantity: 7, note: 'Clutch wire inner/outer' },
-  { id: 'p8', name: 'Throttle / Acc Cable', price: 130, quantity: 6, note: 'Accelerator wire' },
-];
+// Initial stock data starts completely clean for production
+const DEFAULT_PARTS = [];
 
 export function getStoredSupabaseCredentials() {
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : undefined;
@@ -105,6 +96,11 @@ function getLocalInvoices() {
 
 function saveLocalInvoices(invoices) {
   localStorage.setItem(LOCAL_STORAGE_INVOICES_KEY, JSON.stringify(invoices));
+}
+
+export function clearAllLocalData() {
+  localStorage.removeItem(LOCAL_STORAGE_PARTS_KEY);
+  localStorage.removeItem(LOCAL_STORAGE_INVOICES_KEY);
 }
 
 // ---------------- High Level Service API ----------------

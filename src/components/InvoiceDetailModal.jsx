@@ -5,7 +5,6 @@ import {
   Printer,
   Share2,
   CheckCircle2,
-  AlertTriangle,
   RotateCcw,
   PlusCircle,
   FileText,
@@ -23,6 +22,8 @@ export default function InvoiceDetailModal({
   workshopName,
   onCancelInvoice,
   onCreateNew,
+  lang,
+  t,
 }) {
   const [isSharing, setIsSharing] = useState(false);
   const [shareFeedback, setShareFeedback] = useState(null);
@@ -45,11 +46,15 @@ export default function InvoiceDetailModal({
   const handleWhatsAppClick = async (phone = '') => {
     setIsSharing(true);
     try {
-      const res = await shareInvoiceOnWhatsApp(invoice, workshopName, phone);
+      const res = await shareInvoiceOnWhatsApp(invoice, workshopName, phone, lang);
       if (res && res.sharedViaFile) {
-        setShareFeedback('Invoice shared via device share sheet!');
+        setShareFeedback(lang === 'ml' ? 'ബിൽ ഷെയർ ചെയ്തു!' : 'Invoice shared via device share sheet!');
       } else {
-        setShareFeedback('WhatsApp opened with invoice details! PDF also downloaded.');
+        setShareFeedback(
+          lang === 'ml'
+            ? 'ബിൽ വിവരങ്ങളോടെ വാട്സാപ്പ് തുറന്നു! PDF ഡൗൺലോഡ് ചെയ്യപ്പെട്ടിട്ടുണ്ട്.'
+            : 'WhatsApp opened with invoice details! PDF also downloaded.'
+        );
       }
       setTimeout(() => setShareFeedback(null), 6000);
     } catch (err) {
@@ -61,11 +66,7 @@ export default function InvoiceDetailModal({
   };
 
   const handleCancelInvoice = async () => {
-    if (
-      window.confirm(
-        'Are you sure you want to cancel this invoice?\n\nAll deducted spare parts will be restored back to stock!'
-      )
-    ) {
+    if (window.confirm(t.invoiceDetail.cancelConfirm)) {
       setIsCancelling(true);
       await onCancelInvoice(invoice.id);
       setIsCancelling(false);
@@ -80,7 +81,7 @@ export default function InvoiceDetailModal({
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-400" />
             <h3 className="text-lg font-bold">
-              Invoice #{invoice.invoice_number}
+              {t.invoiceDetail.invoiceNo}: #{invoice.invoice_number}
             </h3>
           </div>
           <button
@@ -102,7 +103,7 @@ export default function InvoiceDetailModal({
         {/* Action Buttons Header (Prominent, High-Contrast) */}
         <div className="bg-slate-50 border-b border-slate-200 p-4 md:p-6 no-print">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-            Quick Actions
+            {t.invoiceDetail.quickActions}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Download PDF */}
@@ -111,7 +112,7 @@ export default function InvoiceDetailModal({
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 active:scale-95 transition-all"
             >
               <Download className="w-5 h-5" />
-              <span>Download PDF</span>
+              <span>{t.invoiceDetail.downloadPdf}</span>
             </button>
 
             {/* Print Invoice */}
@@ -120,7 +121,7 @@ export default function InvoiceDetailModal({
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm shadow-md active:scale-95 transition-all"
             >
               <Printer className="w-5 h-5" />
-              <span>Print Invoice</span>
+              <span>{t.invoiceDetail.printInvoice}</span>
             </button>
 
             {/* Share on WhatsApp */}
@@ -129,7 +130,7 @@ export default function InvoiceDetailModal({
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-500/20 active:scale-95 transition-all"
             >
               <Share2 className="w-5 h-5" />
-              <span>WhatsApp Share</span>
+              <span>{t.invoiceDetail.whatsappShare}</span>
             </button>
           </div>
 
@@ -137,7 +138,7 @@ export default function InvoiceDetailModal({
           {showPhonePrompt && (
             <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl animate-in fade-in">
               <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wide mb-1">
-                Send to Customer Phone (Optional 10-digit number):
+                {t.invoiceDetail.phonePrompt}
               </label>
               <div className="flex gap-2">
                 <input
@@ -145,7 +146,7 @@ export default function InvoiceDetailModal({
                   maxLength="10"
                   value={whatsappPhone}
                   onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="e.g. 9876543210 (or leave empty to pick contact)"
+                  placeholder={t.invoiceDetail.phonePlaceholder}
                   className="flex-1 px-4 py-2 text-sm font-semibold rounded-xl border border-emerald-300 focus:outline-none focus:border-emerald-600 bg-white"
                 />
                 <button
@@ -153,11 +154,11 @@ export default function InvoiceDetailModal({
                   disabled={isSharing}
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl"
                 >
-                  {isSharing ? 'Opening...' : 'Open WhatsApp'}
+                  {isSharing ? t.invoiceDetail.opening : t.invoiceDetail.openWhatsapp}
                 </button>
               </div>
               <p className="text-[11px] text-emerald-700 mt-1.5 font-medium">
-                Free WhatsApp Click-to-Chat. Opens WhatsApp with bill text and automatically prepares PDF.
+                {t.invoiceDetail.phoneHelp}
               </p>
             </div>
           )}
@@ -172,15 +173,15 @@ export default function InvoiceDetailModal({
                 {(workshopName || 'BIKE WORKSHOP').toUpperCase()}
               </h2>
               <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">
-                Two-Wheeler Service & Spare Parts
+                {t.invoiceDetail.billTitle}
               </p>
             </div>
 
             <div className="text-right">
-              <div className="text-sm font-bold text-slate-500">INVOICE</div>
+              <div className="text-sm font-bold text-slate-500">{t.invoiceDetail.invoiceNo}</div>
               <div className="text-lg font-black text-slate-900">{invoice.invoice_number}</div>
               <div className="text-xs text-slate-500 font-semibold mt-0.5">
-                Date: {formatDate(invoice.date || invoice.created_at)}
+                {t.invoiceDetail.date} {formatDate(invoice.date || invoice.created_at)}
               </div>
             </div>
           </div>
@@ -188,14 +189,16 @@ export default function InvoiceDetailModal({
           {/* Vehicle Banner */}
           <div className="bg-slate-100 rounded-2xl p-4 flex items-center justify-between border border-slate-200">
             <div>
-              <div className="text-xs font-bold uppercase text-slate-500">Vehicle Registration No.</div>
+              <div className="text-xs font-bold uppercase text-slate-500">
+                {t.invoiceDetail.vehicleNo}
+              </div>
               <div className="text-2xl font-black text-slate-900 tracking-wider mt-0.5">
                 {(invoice.vehicle_number || '').toUpperCase()}
               </div>
             </div>
             {isCancelled && (
               <span className="px-3 py-1 bg-red-100 text-red-700 font-extrabold text-sm rounded-xl border border-red-300">
-                CANCELLED
+                {t.invoiceDetail.cancelled}
               </span>
             )}
           </div>
@@ -205,12 +208,12 @@ export default function InvoiceDetailModal({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b-2 border-slate-900 text-xs uppercase font-extrabold text-slate-700">
-                  <th className="py-2.5 px-2">#</th>
-                  <th className="py-2.5 px-3">Description</th>
-                  <th className="py-2.5 px-3">Type</th>
-                  <th className="py-2.5 px-3 text-center">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Price</th>
-                  <th className="py-2.5 px-3 text-right">Amount</th>
+                  <th className="py-2.5 px-2">{t.invoiceDetail.thSl}</th>
+                  <th className="py-2.5 px-3">{t.invoiceDetail.thDesc}</th>
+                  <th className="py-2.5 px-3">{t.invoiceDetail.thType}</th>
+                  <th className="py-2.5 px-3 text-center">{t.invoiceDetail.thQty}</th>
+                  <th className="py-2.5 px-3 text-right">{t.invoiceDetail.thPrice}</th>
+                  <th className="py-2.5 px-3 text-right">{t.invoiceDetail.thAmount}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
@@ -231,7 +234,7 @@ export default function InvoiceDetailModal({
                               : 'bg-emerald-50 text-emerald-700'
                           }`}
                         >
-                          {item.item_type === 'part' ? 'Part' : 'Work'}
+                          {item.item_type === 'part' ? t.createInvoice.itemColPart : t.createInvoice.itemColWork}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center font-bold">{qty}</td>
@@ -247,10 +250,10 @@ export default function InvoiceDetailModal({
           {/* Total Amount Box */}
           <div className="border-t-2 border-slate-900 pt-4 flex items-center justify-between">
             <div className="text-sm text-slate-500 font-bold">
-              Total Items: {(invoice.items || []).length}
+              {t.invoiceDetail.totalItems} {(invoice.items || []).length}
             </div>
             <div className="text-right">
-              <span className="text-sm font-bold text-slate-500 mr-3">TOTAL:</span>
+              <span className="text-sm font-bold text-slate-500 mr-3">{t.invoiceDetail.total}</span>
               <span className="text-3xl font-black text-slate-900">
                 ₹{(parseFloat(invoice.total_amount) || 0).toFixed(0)}
               </span>
@@ -258,7 +261,7 @@ export default function InvoiceDetailModal({
           </div>
 
           <div className="text-center text-xs text-slate-400 pt-4 italic">
-            Thank you for visiting! Ride safely.
+            {t.invoiceDetail.rideSafe}
           </div>
         </div>
 
@@ -272,7 +275,7 @@ export default function InvoiceDetailModal({
               title="Cancel bill and restore parts back to stock"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Cancel Invoice (Restore Stock)</span>
+              <span>{t.invoiceDetail.cancelBill}</span>
             </button>
           ) : (
             <div />
@@ -285,14 +288,14 @@ export default function InvoiceDetailModal({
                 className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center gap-1.5"
               >
                 <PlusCircle className="w-4 h-4" />
-                <span>Create Another Bill</span>
+                <span>{t.invoiceDetail.createAnother}</span>
               </button>
             )}
             <button
               onClick={onClose}
               className="px-5 py-2.5 rounded-2xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-bold text-sm"
             >
-              Close
+              {t.invoiceDetail.close}
             </button>
           </div>
         </div>

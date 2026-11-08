@@ -146,14 +146,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Sample initial bike workshop parts
-INSERT INTO parts (name, price, quantity, note) VALUES
-('Engine Oil 4T 20W40 (1L)', 450.00, 15, 'Standard bike engine oil'),
-('Brake Shoe (Rear)', 180.00, 8, 'Fits 100cc-150cc motorcycles'),
-('Spark Plug (Standard)', 120.00, 12, 'NGK / Champion compatible'),
-('Chain Lube Spray (150ml)', 220.00, 6, 'Drive chain lubricant'),
-('Air Filter Element', 160.00, 7, 'Foam air filter'),
-('Front Disc Brake Pads', 280.00, 5, 'Ceramic disc brake pads'),
-('Clutch Cable', 140.00, 4, 'Standard clutch wire'),
-('Accelerator Cable', 130.00, 4, 'Throttle cable')
-ON CONFLICT DO NOTHING;

@@ -20,12 +20,12 @@ export default function StockView({
   onDeletePart,
   onAddStock,
   isLoading,
+  t,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingPart, setEditingPart] = useState(null);
   const [quickStockPart, setQuickStockPart] = useState(null);
-  const [deletingPartId, setDeletingPartId] = useState(null);
 
   // Filter parts by name or note
   const filteredParts = parts.filter((part) => {
@@ -56,7 +56,7 @@ export default function StockView({
   };
 
   const handleConfirmDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this spare part?')) {
+    if (window.confirm(t.stock.deleteConfirm)) {
       await onDeletePart(id);
       setIsAddEditModalOpen(false);
       setEditingPart(null);
@@ -77,7 +77,7 @@ export default function StockView({
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 hover:bg-slate-100 active:scale-95 transition-all text-slate-700 font-bold text-sm shadow-sm"
         >
           <ArrowLeft className="w-5 h-5 text-slate-600" />
-          <span>Back to Home</span>
+          <span>{t.stock.backHome}</span>
         </button>
 
         <button
@@ -85,7 +85,7 @@ export default function StockView({
           className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all text-white font-bold text-sm shadow-md shadow-blue-500/20"
         >
           <Plus className="w-5 h-5" />
-          <span>Add New Part</span>
+          <span>{t.stock.addNewPart}</span>
         </button>
       </div>
 
@@ -95,10 +95,13 @@ export default function StockView({
           <div>
             <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
               <Package className="w-8 h-8 text-blue-600" />
-              <span>Spare Parts Stock</span>
+              <span>{t.stock.title}</span>
             </h2>
             <p className="text-slate-500 text-sm mt-1">
-              Total items in database: <strong className="text-slate-800">{parts.length} parts</strong>
+              {t.stock.totalParts}{' '}
+              <strong className="text-slate-800">
+                {parts.length} {t.stock.partsUnit}
+              </strong>
             </p>
           </div>
         </div>
@@ -110,7 +113,7 @@ export default function StockView({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search spare parts by name..."
+            placeholder={t.stock.searchPlaceholder}
             className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:outline-none text-base font-semibold text-slate-800 placeholder-slate-400"
           />
           {searchTerm && (
@@ -118,7 +121,7 @@ export default function StockView({
               onClick={() => setSearchTerm('')}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-600 px-2 py-1 rounded-lg"
             >
-              Clear
+              {t.stock.clear}
             </button>
           )}
         </div>
@@ -128,23 +131,23 @@ export default function StockView({
       {isLoading ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
           <div className="inline-block animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mb-3" />
-          <p className="text-slate-600 font-semibold">Loading spare parts...</p>
+          <p className="text-slate-600 font-semibold">{t.stock.loading}</p>
         </div>
       ) : filteredParts.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm">
           <Package className="w-16 h-16 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-xl font-bold text-slate-800">No spare parts found</h3>
+          <h3 className="text-xl font-bold text-slate-800">{t.stock.noPartsFound}</h3>
           <p className="text-slate-500 text-sm mt-1 max-w-sm mx-auto">
             {searchTerm
-              ? `No parts match "${searchTerm}". Try checking your spelling.`
-              : 'Your stock list is currently empty. Click the button below to add your first spare part.'}
+              ? `"${searchTerm}" ന് അനുയോജ്യമായ പാർട്സുകൾ ലഭ്യമല്ല.`
+              : t.stock.noPartsDesc}
           </p>
           <button
             onClick={handleOpenAdd}
             className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/20"
           >
             <Plus className="w-5 h-5" />
-            <span>Add First Spare Part</span>
+            <span>{t.stock.addFirstPart}</span>
           </button>
         </div>
       ) : (
@@ -154,10 +157,10 @@ export default function StockView({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white text-xs uppercase tracking-wider font-bold">
-                  <th className="py-4 px-6">Part Name</th>
-                  <th className="py-4 px-6">Price</th>
-                  <th className="py-4 px-6 text-center">Available Quantity</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
+                  <th className="py-4 px-6">{t.stock.thPartName}</th>
+                  <th className="py-4 px-6">{t.stock.thPrice}</th>
+                  <th className="py-4 px-6 text-center">{t.stock.thQuantity}</th>
+                  <th className="py-4 px-6 text-right">{t.stock.thActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -195,7 +198,7 @@ export default function StockView({
                           }`}
                         >
                           {isOutOfStock && <AlertTriangle className="w-3.5 h-3.5" />}
-                          {qty} in stock
+                          {qty} {isOutOfStock ? t.stock.outOfStock : t.stock.inStock}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right whitespace-nowrap">
@@ -204,17 +207,17 @@ export default function StockView({
                           <button
                             onClick={() => setQuickStockPart(part)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold text-xs"
-                            title="Add more stock when new shipment arrives"
+                            title={t.stock.addStock}
                           >
                             <PackagePlus className="w-4 h-4" />
-                            <span>+ Stock</span>
+                            <span>{t.stock.addStock}</span>
                           </button>
 
                           {/* Edit button */}
                           <button
                             onClick={() => handleOpenEdit(part)}
                             className="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 border border-slate-200"
-                            title="Edit part details"
+                            title={t.stock.edit}
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -223,7 +226,7 @@ export default function StockView({
                           <button
                             onClick={() => handleConfirmDelete(part.id)}
                             className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200"
-                            title="Delete part"
+                            title={t.stock.delete}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -272,7 +275,7 @@ export default function StockView({
                       }`}
                     >
                       {isOutOfStock && <AlertTriangle className="w-3.5 h-3.5" />}
-                      {qty} in stock
+                      {qty} {isOutOfStock ? t.stock.outOfStock : t.stock.inStock}
                     </span>
 
                     <div className="flex items-center gap-1.5">
@@ -281,7 +284,7 @@ export default function StockView({
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold text-xs"
                       >
                         <PackagePlus className="w-4 h-4" />
-                        <span>+ Stock</span>
+                        <span>{t.stock.addStock}</span>
                       </button>
                       <button
                         onClick={() => handleOpenEdit(part)}
@@ -311,6 +314,7 @@ export default function StockView({
         onSave={handleSavePart}
         editingPart={editingPart}
         onDelete={handleConfirmDelete}
+        t={t}
       />
 
       {/* Quick Add Stock Modal */}
@@ -319,6 +323,7 @@ export default function StockView({
         onClose={() => setQuickStockPart(null)}
         part={quickStockPart}
         onConfirm={handleConfirmQuickStock}
+        t={t}
       />
     </div>
   );

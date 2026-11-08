@@ -5,8 +5,6 @@ import {
   FileText,
   Eye,
   Calendar,
-  AlertCircle,
-  RotateCcw,
 } from 'lucide-react';
 import { formatDate } from '../services/invoiceService';
 
@@ -16,6 +14,7 @@ export default function InvoiceHistoryView({
   onSelectInvoice,
   onCancelInvoice,
   isLoading,
+  t,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -35,7 +34,7 @@ export default function InvoiceHistoryView({
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 hover:bg-slate-100 active:scale-95 transition-all text-slate-700 font-bold text-sm shadow-sm"
         >
           <ArrowLeft className="w-5 h-5 text-slate-600" />
-          <span>Back to Invoices</span>
+          <span>{t.history.back}</span>
         </button>
       </div>
 
@@ -44,10 +43,10 @@ export default function InvoiceHistoryView({
         <div className="mb-4">
           <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
             <FileText className="w-8 h-8 text-emerald-600" />
-            <span>Previous Invoices</span>
+            <span>{t.history.title}</span>
           </h2>
           <p className="text-slate-500 text-sm mt-1">
-            Search past bills by vehicle number or invoice number
+            {t.history.subtitle}
           </p>
         </div>
 
@@ -58,7 +57,7 @@ export default function InvoiceHistoryView({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by Vehicle Number (e.g. KL 07) or Invoice #..."
+            placeholder={t.history.searchPlaceholder}
             className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-emerald-500 focus:outline-none text-base font-semibold text-slate-800 placeholder-slate-400"
           />
           {searchTerm && (
@@ -66,7 +65,7 @@ export default function InvoiceHistoryView({
               onClick={() => setSearchTerm('')}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-600 px-2 py-1 rounded-lg"
             >
-              Clear
+              {t.history.clear}
             </button>
           )}
         </div>
@@ -76,16 +75,14 @@ export default function InvoiceHistoryView({
       {isLoading ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
           <div className="inline-block animate-spin w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full mb-3" />
-          <p className="text-slate-600 font-semibold">Loading invoices...</p>
+          <p className="text-slate-600 font-semibold">{t.history.loading}</p>
         </div>
       ) : filteredInvoices.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm">
           <FileText className="w-16 h-16 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-xl font-bold text-slate-800">No invoices found</h3>
+          <h3 className="text-xl font-bold text-slate-800">{t.history.noInvoices}</h3>
           <p className="text-slate-500 text-sm mt-1 max-w-sm mx-auto">
-            {searchTerm
-              ? `No invoices match "${searchTerm}".`
-              : 'No invoices created yet.'}
+            {t.history.noInvoicesDesc}
           </p>
         </div>
       ) : (
@@ -115,7 +112,7 @@ export default function InvoiceHistoryView({
                     </span>
                     {isCancelled && (
                       <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-red-100 text-red-700">
-                        CANCELLED (Stock Restored)
+                        {t.history.cancelledBadge}
                       </span>
                     )}
                   </div>
@@ -123,7 +120,7 @@ export default function InvoiceHistoryView({
                     {(inv.vehicle_number || '').toUpperCase()}
                   </div>
                   <div className="text-xs text-slate-500 mt-1 font-medium">
-                    {itemsCount} {itemsCount === 1 ? 'item' : 'items'} on bill
+                    {itemsCount} {t.history.itemsLabel}
                   </div>
                 </div>
 
@@ -143,7 +140,7 @@ export default function InvoiceHistoryView({
                     className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
                   >
                     <Eye className="w-4 h-4" />
-                    <span>View Bill</span>
+                    <span>{t.history.viewBill}</span>
                   </button>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, PlusCircle, PackageCheck } from 'lucide-react';
 
-export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm }) {
+export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t }) {
   const [addQty, setAddQty] = useState('');
   const [error, setError] = useState('');
 
@@ -11,7 +11,7 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm })
     e.preventDefault();
     const parsed = parseInt(addQty, 10);
     if (isNaN(parsed) || parsed <= 0) {
-      setError('Please enter a valid number of parts (at least 1).');
+      setError(t.quickStockModal.errInvalid);
       return;
     }
     onConfirm(part.id, parsed);
@@ -29,7 +29,7 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm })
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <PackageCheck className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-lg font-bold">Add More Stock</h3>
+            <h3 className="text-lg font-bold">{t.quickStockModal.title}</h3>
           </div>
           <button
             onClick={onClose}
@@ -41,12 +41,12 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm })
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-            <div className="text-xs uppercase font-bold text-slate-400">Spare Part</div>
+            <div className="text-xs uppercase font-bold text-slate-400">{t.quickStockModal.partLabel}</div>
             <div className="text-lg font-extrabold text-slate-900 mt-0.5">{part.name}</div>
             <div className="mt-2 text-sm text-slate-600 flex items-center justify-between">
-              <span>Current in stock:</span>
+              <span>{t.quickStockModal.currentStock}</span>
               <span className="font-bold text-base text-slate-900 bg-white px-3 py-1 rounded-lg border border-slate-200">
-                {currentStock} units
+                {currentStock} {t.quickStockModal.units}
               </span>
             </div>
           </div>
@@ -59,7 +59,7 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm })
 
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">
-              Quantity Received (New Stock)
+              {t.quickStockModal.qtyReceived}
             </label>
             <input
               type="number"
@@ -69,14 +69,14 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm })
               autoFocus
               value={addQty}
               onChange={(e) => setAddQty(e.target.value)}
-              placeholder="e.g. 5, 10, 20"
+              placeholder={t.quickStockModal.qtyPlaceholder}
               className="w-full text-2xl font-bold px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-800 text-center"
             />
           </div>
 
           {parsedAdd > 0 && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-sm font-semibold text-emerald-800">
-              New Total Stock will be: <strong className="text-base">{newTotal} units</strong>
+              {t.quickStockModal.newTotalLabel} <strong className="text-base">{newTotal} {t.quickStockModal.units}</strong>
             </div>
           )}
 
@@ -86,14 +86,14 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm })
               onClick={onClose}
               className="px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-sm"
             >
-              Cancel
+              {t.quickStockModal.cancel}
             </button>
             <button
               type="submit"
               className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base flex items-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-95 transition-all"
             >
               <PlusCircle className="w-5 h-5" />
-              <span>Add to Stock</span>
+              <span>{t.quickStockModal.confirm}</span>
             </button>
           </div>
         </form>

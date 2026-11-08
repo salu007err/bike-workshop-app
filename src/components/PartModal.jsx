@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Trash2 } from 'lucide-react';
 
-export default function PartModal({ isOpen, onClose, onSave, editingPart, onDelete }) {
+export default function PartModal({ isOpen, onClose, onSave, editingPart, onDelete, t }) {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -28,17 +28,17 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Please enter the spare part name.');
+      setError(t.partModal.errName);
       return;
     }
     const numPrice = parseFloat(price);
     if (isNaN(numPrice) || numPrice < 0) {
-      setError('Please enter a valid price in ₹ (e.g. 450).');
+      setError(t.partModal.errPrice);
       return;
     }
     const numQty = parseInt(quantity, 10);
     if (isNaN(numQty) || numQty < 0) {
-      setError('Please enter a valid quantity (e.g. 10).');
+      setError(t.partModal.errQty);
       return;
     }
 
@@ -55,7 +55,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <h3 className="text-xl font-bold tracking-tight">
-            {editingPart ? 'Edit Spare Part' : 'Add New Spare Part'}
+            {editingPart ? t.partModal.editTitle : t.partModal.addTitle}
           </h3>
           <button
             onClick={onClose}
@@ -76,14 +76,14 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
           {/* Part Name */}
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">
-              Part Name <span className="text-red-500">*</span>
+              {t.partModal.nameLabel} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Engine Oil, Brake Shoe, Spark Plug"
+              placeholder={t.partModal.namePlaceholder}
               className="w-full text-lg px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
               autoFocus
             />
@@ -93,7 +93,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">
-                Price (₹) <span className="text-red-500">*</span>
+                {t.partModal.priceLabel} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">
@@ -114,7 +114,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
 
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">
-                Available Quantity <span className="text-red-500">*</span>
+                {t.partModal.qtyLabel} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -123,7 +123,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="e.g. 10"
+                placeholder={t.partModal.qtyPlaceholder}
                 className="w-full text-lg px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-semibold text-slate-800"
               />
             </div>
@@ -132,13 +132,13 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
           {/* Optional Note */}
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">
-              Note (Optional)
+              {t.partModal.noteLabel}
             </label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Fits Splendor, Activa, Pulsar"
+              placeholder={t.partModal.notePlaceholder}
               className="w-full text-base px-4 py-2.5 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none"
             />
           </div>
@@ -152,7 +152,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
                 className="px-4 py-3 rounded-2xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 font-bold flex items-center gap-2 text-sm"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Delete Part</span>
+                <span>{t.partModal.deletePart}</span>
               </button>
             ) : (
               <div />
@@ -164,14 +164,14 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
                 onClick={onClose}
                 className="px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-sm"
               >
-                Cancel
+                {t.partModal.cancel}
               </button>
               <button
                 type="submit"
                 className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base flex items-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition-all"
               >
                 <Save className="w-5 h-5" />
-                <span>Save Part</span>
+                <span>{t.partModal.save}</span>
               </button>
             </div>
           </div>

@@ -164,33 +164,37 @@ export function downloadInvoicePDF(invoice, workshopName) {
 }
 
 /**
- * Creates clean WhatsApp text summary for click-to-chat.
+ * Creates clean WhatsApp text summary for click-to-chat with language support.
  */
-export function getWhatsAppInvoiceMessage(invoice, workshopName = 'BIKE WORKSHOP') {
+export function getWhatsAppInvoiceMessage(invoice, workshopName = 'BIKE WORKSHOP', lang = 'en') {
+  const isMl = lang === 'ml';
   const dateStr = formatDate(invoice.date || invoice.created_at);
   const vehicle = (invoice.vehicle_number || '').toUpperCase();
   const shop = (workshopName || 'BIKE WORKSHOP').toUpperCase();
 
   let msg = `*${shop}*\n`;
-  msg += `*VEHICLE BILL / INVOICE*\n`;
+  msg += isMl ? `*വാഹന സർവീസ് ബിൽ (VEHICLE BILL)*\n` : `*VEHICLE BILL / INVOICE*\n`;
   msg += `--------------------------------\n`;
-  msg += `*Invoice No:* ${invoice.invoice_number || 'N/A'}\n`;
-  msg += `*Date:* ${dateStr}\n`;
-  msg += `*Vehicle No:* ${vehicle}\n`;
+  msg += isMl ? `*ബിൽ നമ്പർ:* ${invoice.invoice_number || 'N/A'}\n` : `*Invoice No:* ${invoice.invoice_number || 'N/A'}\n`;
+  msg += isMl ? `*തീയതി:* ${dateStr}\n` : `*Date:* ${dateStr}\n`;
+  msg += isMl ? `*വണ്ടി നമ്പർ:* ${vehicle}\n` : `*Vehicle No:* ${vehicle}\n`;
   msg += `--------------------------------\n`;
-  msg += `*ITEMS & WORK DONE:*\n`;
+  msg += isMl ? `*മാറ്റിയ പാർട്സുകളും ചെയ്ത പണികളും:*\n` : `*ITEMS & WORK DONE:*\n`;
 
   (invoice.items || []).forEach((item, idx) => {
-    const itemType = item.item_type === 'part' ? '[Part]' : '[Work]';
     const qty = item.quantity > 1 ? ` (Qty: ${item.quantity})` : '';
     const lineTotal = ((parseFloat(item.price) || 0) * (parseInt(item.quantity, 10) || 1)).toFixed(0);
     msg += `${idx + 1}. ${item.description}${qty} - Rs.${lineTotal}\n`;
   });
 
   msg += `--------------------------------\n`;
-  msg += `*TOTAL AMOUNT: Rs.${(parseFloat(invoice.total_amount) || 0).toFixed(0)}*\n`;
+  msg += isMl
+    ? `*ആകെ തുക: Rs.${(parseFloat(invoice.total_amount) || 0).toFixed(0)}*\n`
+    : `*TOTAL AMOUNT: Rs.${(parseFloat(invoice.total_amount) || 0).toFixed(0)}*\n`;
   msg += `--------------------------------\n`;
-  msg += `Thank you for your visit! Ride safe.`;
+  msg += isMl
+    ? `ഞങ്ങളുടെ വർക്ക്ഷോപ്പ് തിരഞ്ഞെടുത്തതിന് നന്ദി! സുരക്ഷിതമായി യാത്ര ചെയ്യുക.`
+    : `Thank you for your visit! Ride safe.`;
 
   return msg;
 }
@@ -201,11 +205,16 @@ export function getWhatsAppInvoiceMessage(invoice, workshopName = 'BIKE WORKSHOP
  * 2. If supported, prompts user to share the PDF directly.
  * 3. Also provides WhatsApp Click-to-Chat URL to immediately open WhatsApp with pre-filled message.
  */
-export async function shareInvoiceOnWhatsApp(invoice, workshopName = 'BIKE WORKSHOP', targetPhone = '') {
+export async function shareInvoiceOnWhatsApp(
+  invoice,
+  workshopName = 'BIKE WORKSHOP',
+  targetPhone = '',
+  lang = 'en'
+) {
   const doc = generateInvoicePDFDoc(invoice, workshopName);
   const fileName = `Invoice_${invoice.invoice_number || 'bill'}_${(invoice.vehicle_number || 'bike').replace(/\s+/g, '_')}.pdf`;
   const pdfBlob = doc.output('blob');
-  const messageText = getWhatsAppInvoiceMessage(invoice, workshopName);
+  const messageText = getWhatsAppInvoiceMessage(invoice, workshopName, lang);
 
   // Check Web Share API with File
   const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
