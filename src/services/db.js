@@ -9,7 +9,6 @@ try {
     localStorage.removeItem('bike_workshop_parts');
     localStorage.removeItem('bike_workshop_invoices');
     localStorage.removeItem('bike_workshop_supabase_credentials');
-    localStorage.removeItem('bike_workshop_gemini_key');
   }
 } catch (e) {
   // ignore
@@ -437,12 +436,14 @@ export async function fetchInvoices() {
  */
 export async function createInvoiceWithStockDeduction({
   vehicleNumber,
+  kmReading = null,
   items,
   totalAmount,
   date = new Date().toISOString().split('T')[0],
   workshopName = 'BIKE WORKSHOP',
 }) {
   const cleanVehicle = (vehicleNumber || '').toUpperCase().trim();
+  const cleanKm = (kmReading || '').trim() || null;
   if (!cleanVehicle) {
     return { success: false, error: 'Vehicle registration number is required' };
   }
@@ -537,21 +538,32 @@ export async function createInvoiceWithStockDeduction({
     }
 
     // 2. Insert invoice into Supabase
-    const { data: newInv, error: invErr } = await supabase
-      .from('invoices')
-      .insert([
-        {
-          invoice_number: invoiceNumber,
-          vehicle_number: cleanVehicle,
-          date,
-          total_amount: totalAmount,
-          invoice_status: 'confirmed',
-        },
-      ])
-      .select()
-      .single();
+    const invoicePayload = {
+      invoice_number: invoiceNumber,
+      vehicle_number: cleanVehicle,
+      date,
+      total_amount: totalAmount,
+      invoice_status: 'confirmed',
+    };
+    if (cleanKm) {
+      invoicePayload.km_reading = cleanKm;
+    }
 
-    if (invErr) throw invErr;
+    let newInv = null;
+    let invInsertRes = await supabase.from('invoices').insert([invoicePayload]).select().single();
+
+    if (invInsertRes.error) {
+      // Fallback if km_reading column is not yet in Supabase schema cache
+      if (invoicePayload.km_reading && (invInsertRes.error.code === 'PGRST204' || (invInsertRes.error.message || '').includes('km_reading'))) {
+        delete invoicePayload.km_reading;
+        invInsertRes = await supabase.from('invoices').insert([invoicePayload]).select().single();
+      }
+    }
+    if (invInsertRes.error) throw invInsertRes.error;
+    newInv = invInsertRes.data;
+    if (cleanKm && !newInv.km_reading) {
+      newInv.km_reading = cleanKm;
+    }
 
     // 3. Insert invoice items into Supabase
     const insertItems = items.map((it) => ({
@@ -602,11 +614,13 @@ export async function createInvoiceWithStockDeduction({
 export async function updateInvoiceWithStockDeduction({
   invoiceId,
   vehicleNumber,
+  kmReading = null,
   items,
   totalAmount,
   workshopName = 'BIKE WORKSHOP',
 }) {
   const cleanVehicle = (vehicleNumber || '').toUpperCase().trim();
+  const cleanKm = kmReading !== undefined && kmReading !== null ? (kmReading || '').trim() || null : undefined;
   if (!cleanVehicle) {
     return { success: false, error: 'Vehicle registration number is required' };
   }
@@ -706,18 +720,39 @@ export async function updateInvoiceWithStockDeduction({
       }
     }
 
-    // 5. Update invoice vehicle number and total
-    const { data: updatedInv, error: updateInvErr } = await supabase
+    // 5. Update invoice vehicle number, km reading, and total
+    const updatePayload = {
+      vehicle_number: cleanVehicle,
+      total_amount: totalAmount,
+    };
+    if (cleanKm !== undefined) {
+      updatePayload.km_reading = cleanKm;
+    }
+
+    let updatedInv = null;
+    let updateInvRes = await supabase
       .from('invoices')
-      .update({
-        vehicle_number: cleanVehicle,
-        total_amount: totalAmount,
-      })
+      .update(updatePayload)
       .eq('id', invoiceId)
       .select()
       .single();
 
-    if (updateInvErr) throw updateInvErr;
+    if (updateInvRes.error) {
+      if (updatePayload.km_reading !== undefined && (updateInvRes.error.code === 'PGRST204' || (updateInvRes.error.message || '').includes('km_reading'))) {
+        delete updatePayload.km_reading;
+        updateInvRes = await supabase
+          .from('invoices')
+          .update(updatePayload)
+          .eq('id', invoiceId)
+          .select()
+          .single();
+      }
+    }
+    if (updateInvRes.error) throw updateInvRes.error;
+    updatedInv = updateInvRes.data;
+    if (cleanKm && !updatedInv.km_reading) {
+      updatedInv.km_reading = cleanKm;
+    }
 
     // 6. Delete old invoice items and insert new ones
     await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);

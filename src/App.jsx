@@ -190,11 +190,12 @@ export default function App() {
   };
 
   // Invoice creation (Direct Supabase)
-  const handleCreateInvoice = async ({ vehicleNumber, items, totalAmount }) => {
+  const handleCreateInvoice = async ({ vehicleNumber, kmReading, items, totalAmount }) => {
     setIsCreatingInvoice(true);
     try {
       const res = await createInvoiceWithStockDeduction({
         vehicleNumber,
+        kmReading,
         items,
         totalAmount,
         workshopName: workshopConfig.workshopName,
@@ -233,12 +234,13 @@ export default function App() {
   };
 
   // Update existing invoice & reconcile stock (Direct Supabase)
-  const handleUpdateInvoice = async ({ invoiceId, vehicleNumber, items, totalAmount }) => {
+  const handleUpdateInvoice = async ({ invoiceId, vehicleNumber, kmReading, items, totalAmount }) => {
     setIsCreatingInvoice(true);
     try {
       const res = await updateInvoiceWithStockDeduction({
         invoiceId,
         vehicleNumber,
+        kmReading,
         items,
         totalAmount,
         workshopName: workshopConfig.workshopName,

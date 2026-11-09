@@ -10,6 +10,7 @@ import {
   FileText,
   Calendar,
   Edit2,
+  Gauge,
 } from 'lucide-react';
 import {
   downloadInvoicePDF,
@@ -196,7 +197,7 @@ export default function InvoiceDetailModal({
             </div>
           </div>
 
-          {/* Vehicle Number Banner */}
+          {/* Vehicle Number & KM Reading Banner */}
           <div className="bg-slate-100 rounded-xl p-3 flex items-center justify-between border border-slate-200">
             <div>
               <div className="text-[10px] font-bold uppercase text-slate-400">
@@ -205,6 +206,16 @@ export default function InvoiceDetailModal({
               <div className="text-xl font-black text-slate-900 tracking-wider">
                 {(invoice.vehicle_number || '').toUpperCase()}
               </div>
+              {invoice.km_reading && (
+                <div className="text-xs font-bold text-blue-700 flex items-center gap-1 mt-0.5">
+                  <Gauge className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                  <span>
+                    {invoice.km_reading.toUpperCase().includes('KM')
+                      ? invoice.km_reading
+                      : `${invoice.km_reading} KM`}
+                  </span>
+                </div>
+              )}
             </div>
             {isCancelled && (
               <span className="px-2 py-0.5 bg-red-100 text-red-700 font-black text-xs rounded-md border border-red-200">

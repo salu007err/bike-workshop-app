@@ -18,6 +18,7 @@ import {
   Loader2,
   Edit2,
   Info,
+  Gauge,
 } from 'lucide-react';
 import { fuzzyFilter } from '../services/searchUtils';
 import { searchCommonBikeParts } from '../services/commonBikeParts';
@@ -35,6 +36,7 @@ export default function CreateInvoiceView({
   lang,
 }) {
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [kmReading, setKmReading] = useState('');
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -44,6 +46,7 @@ export default function CreateInvoiceView({
   useEffect(() => {
     if (editingInvoice) {
       setVehicleNumber(editingInvoice.vehicle_number || '');
+      setKmReading(editingInvoice.km_reading || '');
       if (Array.isArray(editingInvoice.items)) {
         setItems(
           editingInvoice.items.map((it, idx) => ({
@@ -300,16 +303,19 @@ export default function CreateInvoiceView({
       setIsSubmitting(true);
       setError('');
       let success = false;
+      const cleanKm = kmReading.trim() ? kmReading.trim() : null;
       if (editingInvoice && onUpdateInvoice) {
         success = await onUpdateInvoice({
           invoiceId: editingInvoice.id,
           vehicleNumber: vehicleNumber.trim().toUpperCase(),
+          kmReading: cleanKm,
           items,
           totalAmount,
         });
       } else {
         success = await onCreateInvoice({
           vehicleNumber: vehicleNumber.trim().toUpperCase(),
+          kmReading: cleanKm,
           items,
           totalAmount,
         });
@@ -318,6 +324,7 @@ export default function CreateInvoiceView({
       if (success) {
         setShowConfirmModal(false);
         setVehicleNumber('');
+        setKmReading('');
         setItems([]);
       }
     } catch (err) {
@@ -411,23 +418,50 @@ export default function CreateInvoiceView({
         </div>
       )}
 
-      {/* 2. STEP 1: VEHICLE REGISTRATION NUMBER */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-2">
-        <label className="block text-xs font-black uppercase tracking-wider text-slate-600">
-          {t.createInvoice.vehicleLabel} <span className="text-red-500">*</span>
-        </label>
-        <div>
-          <input
-            type="text"
-            required
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck="false"
-            value={vehicleNumber}
-            onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-            placeholder={t.createInvoice.vehiclePlaceholder}
-            className="w-full text-lg sm:text-2xl font-black uppercase tracking-wider px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
-          />
+      {/* 2. STEP 1: VEHICLE REGISTRATION NUMBER & OPTIONAL KM READING */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1">
+              {t.createInvoice.vehicleLabel} <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck="false"
+              value={vehicleNumber}
+              onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+              placeholder={t.createInvoice.vehiclePlaceholder}
+              className="w-full text-base sm:text-xl font-black uppercase tracking-wider px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                <Gauge className="w-3.5 h-3.5 text-blue-600" />
+                <span>{t.createInvoice.kmLabel || 'KM Reading'}</span>
+              </label>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+                {t.createInvoice.optional || 'Optional'}
+              </span>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={kmReading}
+                onChange={(e) => setKmReading(e.target.value)}
+                placeholder={t.createInvoice.kmPlaceholder || 'e.g. 24,500'}
+                className="w-full text-base sm:text-lg font-black px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-blue-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 select-none">
+                KM
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -982,13 +1016,26 @@ export default function CreateInvoiceView({
             </div>
 
             <div className="p-4 sm:p-6 space-y-3.5">
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                <div className="text-[11px] uppercase font-bold text-slate-400">
-                  {t.createInvoice.vehicleNumLabel}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] uppercase font-bold text-slate-400">
+                    {t.createInvoice.vehicleNumLabel}
+                  </div>
+                  <div className="text-xl font-black text-slate-900 tracking-wider mt-0.5">
+                    {vehicleNumber.toUpperCase()}
+                  </div>
                 </div>
-                <div className="text-xl font-black text-slate-900 tracking-wider mt-0.5">
-                  {vehicleNumber.toUpperCase()}
-                </div>
+                {kmReading.trim() && (
+                  <div className="text-right">
+                    <div className="text-[11px] uppercase font-bold text-slate-400 flex items-center justify-end gap-1">
+                      <Gauge className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{t.createInvoice.kmLabel || 'KM'}</span>
+                    </div>
+                    <div className="text-sm sm:text-base font-black text-blue-700 tracking-wide mt-0.5">
+                      {kmReading.trim().toUpperCase().includes('KM') ? kmReading.trim() : `${kmReading.trim()} KM`}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Stock Items to be deducted */}

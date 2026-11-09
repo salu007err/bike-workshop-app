@@ -8,6 +8,7 @@ import {
   Plus,
   Clock,
   Sparkles,
+  Gauge,
 } from 'lucide-react';
 import { formatDate } from '../services/invoiceService';
 
@@ -195,8 +196,16 @@ export default function HomeView({
                 className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 px-1 rounded-xl transition-colors cursor-pointer active:scale-99"
               >
                 <div className="min-w-0">
-                  <div className="font-black text-slate-900 text-sm tracking-wide truncate">
-                    {(inv.vehicle_number || '').toUpperCase()}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-black text-slate-900 text-sm tracking-wide truncate">
+                      {(inv.vehicle_number || '').toUpperCase()}
+                    </span>
+                    {inv.km_reading && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        <Gauge className="w-2.5 h-2.5 text-indigo-500 flex-shrink-0" />
+                        {inv.km_reading.toUpperCase().includes('KM') ? inv.km_reading : `${inv.km_reading} KM`}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-slate-400 font-medium">
                     #{inv.invoice_number} • {formatDate(inv.date || inv.created_at)}

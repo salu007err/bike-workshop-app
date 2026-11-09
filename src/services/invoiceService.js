@@ -42,11 +42,11 @@ export function generateInvoicePDFDoc(invoice, workshopName = 'BIKE WORKSHOP') {
 
   // Invoice badge
   doc.setFillColor(59, 130, 246); // blue-500
-  doc.roundedRect(pageWidth - 55, 8, 41, 14, 2, 2, 'F');
+  doc.roundedRect(pageWidth - 45, 8, 31, 14, 2, 2, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('ORIGINAL BILL', pageWidth - 50, 17);
+  doc.text('INVOICE', pageWidth - 41, 17);
 
   // Invoice Details Box
   doc.setFillColor(248, 250, 252); // slate-50
@@ -60,6 +60,20 @@ export function generateInvoicePDFDoc(invoice, workshopName = 'BIKE WORKSHOP') {
   doc.setFontSize(16);
   doc.setTextColor(15, 23, 42);
   doc.text((invoice.vehicle_number || 'N/A').toUpperCase(), 20, 56);
+
+  // Optional KM Reading in details box
+  if (invoice.km_reading) {
+    const cleanKm = invoice.km_reading.toUpperCase().includes('KM')
+      ? invoice.km_reading.toUpperCase()
+      : `${invoice.km_reading} KM`;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 116, 139);
+    doc.text('KILOMETRE (KM):', 105, 46);
+    doc.setFontSize(13);
+    doc.setTextColor(15, 23, 42);
+    doc.text(cleanKm, 105, 56);
+  }
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
@@ -180,6 +194,12 @@ export function getWhatsAppInvoiceMessage(invoice, workshopName = 'BIKE WORKSHOP
   msg += isMl ? `*ബിൽ നമ്പർ:* ${invoice.invoice_number || 'N/A'}\n` : `*Invoice No:* ${invoice.invoice_number || 'N/A'}\n`;
   msg += isMl ? `*തീയതി:* ${dateStr}\n` : `*Date:* ${dateStr}\n`;
   msg += isMl ? `*വണ്ടി നമ്പർ:* ${vehicle}\n` : `*Vehicle No:* ${vehicle}\n`;
+  if (invoice.km_reading) {
+    const cleanKm = invoice.km_reading.toUpperCase().includes('KM')
+      ? invoice.km_reading.toUpperCase()
+      : `${invoice.km_reading} KM`;
+    msg += isMl ? `*കിലോമീറ്റർ (KM):* ${cleanKm}\n` : `*Kilometre (KM):* ${cleanKm}\n`;
+  }
   msg += `--------------------------------\n`;
   msg += isMl ? `*മാറ്റിയ പാർട്സുകളും ചെയ്ത പണികളും:*\n` : `*ITEMS & WORK DONE:*\n`;
 

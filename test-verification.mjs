@@ -105,7 +105,7 @@ const mockSupabase = {
           select: () => ({
             single: () => {
               const inv = {
-                id: 'inv_' + Date.now(),
+                id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 created_at: new Date().toISOString(),
                 ...rows[0],
                 items: []
@@ -305,7 +305,7 @@ const aiResponseMl = await aiAgent.queryAIAssistant({
   lang: 'ml'
 });
 assert(aiResponseMl.text.includes('ബിൽ'), 'AI responds in Malayalam for invoice creation doubt');
-assert(aiResponseMl.engine === 'builtin' || aiResponseMl.engine.includes('Gemini') || aiResponseMl.engine.includes('Free') || aiResponseMl.engine.includes('built'), 'AI operates in 100% free mode (Gemini Free Tier or Built-in AI)');
+assert(aiResponseMl.engine === 'stored' || aiResponseMl.engine === 'builtin' || (aiResponseMl.engine && aiResponseMl.engine.includes('gemini')), 'AI operates in verified stored mode or Gemini AI');
 
 // AI Query in English
 const aiResponseEn = await aiAgent.queryAIAssistant({
@@ -671,7 +671,138 @@ assert(airFilterCheck3.quantity === 6, 'Only the workshop in-stock part was dedu
 const hybridPdfDoc = invService.generateInvoicePDFDoc(hybridRes.data, 'SPEEDY MOTORS');
 assert(hybridPdfDoc && typeof hybridPdfDoc.output === 'function', 'Generated PDF invoice with Outside Part differentiation');
 
+console.log('\n--- TEST SUITE 17: Optional KM Reading & Cleaned Promotional Wordings ---');
 
+// Test 1: Invoice with KM Reading
+const kmInvoiceRes = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 CD 1234',
+  items: [
+    {
+      part_id: null,
+      description: 'General Water Wash & Chain Lube',
+      quantity: 1,
+      price: 250,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 250,
+  kmReading: '24,500'
+});
+
+assert(kmInvoiceRes.success === true, 'Invoice with KM reading created successfully');
+assert(kmInvoiceRes.data.km_reading === '24,500', 'KM reading persisted in invoice data');
+
+// PDF with KM Reading
+const kmPdfDoc = invService.generateInvoicePDFDoc(kmInvoiceRes.data, 'SPEEDY MOTORS');
+assert(kmPdfDoc && typeof kmPdfDoc.output === 'function', 'PDF with KM generated successfully');
+
+// Test 2: Invoice without KM Reading (completely optional)
+const noKmInvoiceRes = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 CD 5678',
+  items: [
+    {
+      part_id: null,
+      description: 'Oil Change Labour',
+      quantity: 1,
+      price: 100,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 100
+});
+
+assert(noKmInvoiceRes.success === true, 'Invoice without KM reading created successfully');
+assert(!noKmInvoiceRes.data.km_reading, 'KM reading is null/empty when omitted');
+
+// PDF without KM Reading (ensure no errors and omitted clean)
+const noKmPdfDoc = invService.generateInvoicePDFDoc(noKmInvoiceRes.data, 'SPEEDY MOTORS');
+assert(noKmPdfDoc && typeof noKmPdfDoc.output === 'function', 'PDF without KM generated cleanly');
+
+// Test 3: Updating KM Reading
+const updatedKmRes = await db.updateInvoiceWithStockDeduction({
+  invoiceId: kmInvoiceRes.data.id,
+  vehicleNumber: 'KL 07 CD 1234',
+  items: kmInvoiceRes.data.items,
+  totalAmount: 250,
+  kmReading: '24,800 KM'
+});
+assert(updatedKmRes.success === true, 'Invoice KM reading updated successfully');
+assert(updatedKmRes.data.km_reading === '24,800 KM', 'Updated KM reading reflected in database');
+
+// Test 4: WhatsApp Message Verification (with KM & without KM)
+const kmWhatsAppEn = invService.getWhatsAppInvoiceMessage(kmInvoiceRes.data, 'SPEEDY MOTORS', 'en');
+assert(kmWhatsAppEn.includes('(KM):') && kmWhatsAppEn.includes('24,500'), 'WhatsApp text includes KM when provided');
+
+const kmWhatsAppMl = invService.getWhatsAppInvoiceMessage(kmInvoiceRes.data, 'SPEEDY MOTORS', 'ml');
+assert(kmWhatsAppMl.includes('കിലോമീറ്റർ') && kmWhatsAppMl.includes('24,500'), 'Malayalam WhatsApp text includes KM when provided');
+
+const noKmWhatsApp = invService.getWhatsAppInvoiceMessage(noKmInvoiceRes.data, 'SPEEDY MOTORS', 'en');
+assert(!noKmWhatsApp.includes('KM'), 'WhatsApp text omits KM line completely when not provided');
+
+// Test 5: Verify Promotional "100% Free" and "ORIGINAL BILL" Removal
+assert(!kmWhatsAppEn.includes('100% Free'), 'WhatsApp text contains no "100% Free" promotional wording');
+assert(!kmWhatsAppMl.includes('100% സൗജന്യം'), 'Malayalam WhatsApp text contains no "100% സൗജന്യം" wording');
+
+const aiWhatsAppResp = await aiAgent.queryAIAssistant({
+  userQuery: 'How to share invoice on WhatsApp?',
+  parts: [],
+  invoices: [],
+  lang: 'en'
+});
+assert(!aiWhatsAppResp.text.includes('100% Free'), 'AI Assistant WhatsApp answer contains no "100% Free" badge');
+assert(!aiWhatsAppResp.text.includes('ORIGINAL BILL'), 'AI Assistant answer contains no "ORIGINAL BILL"');
+
+console.log('\n--- TEST SUITE 18: Smart AI Routing (Stored vs Gemini AI) ---');
+
+// Test A: Stored query detection
+assert(aiAgent.isStoredWorkshopQuery('How to create an invoice?', [], []) === true, 'Recognizes invoice guide as stored query');
+assert(aiAgent.isStoredWorkshopQuery('What is out of stock?', [], []) === true, 'Recognizes out of stock as stored query');
+assert(aiAgent.isStoredWorkshopQuery('Total stock value', [], []) === true, 'Recognizes stock value as stored query');
+assert(aiAgent.isStoredWorkshopQuery('KL 07 CD 1234', [], []) === true, 'Recognizes vehicle search as stored query');
+
+// Test B: Non-stored query detection (Dynamic Gemini AI)
+assert(aiAgent.isStoredWorkshopQuery('Why is engine oil leaking from the bottom of bike?', [], []) === false, 'Recognizes mechanic diagnosis as Gemini query');
+assert(aiAgent.isStoredWorkshopQuery('How to clean carburetor jets?', [], []) === false, 'Recognizes repair instruction as Gemini query');
+assert(aiAgent.isStoredWorkshopQuery('Recommended tyre pressure for scooter', [], []) === false, 'Recognizes technical spec as Gemini query');
+
+// Test C: Stored Query Response (Engine is 'stored')
+const storedQueryResp = await aiAgent.queryAIAssistant({
+  userQuery: 'What is my total stock value?',
+  parts: (await db.fetchParts()).data,
+  invoices: [],
+  lang: 'en'
+});
+assert(storedQueryResp.engine === 'stored', 'Stored inventory query served by local database');
+assert(storedQueryResp.text.includes('Workshop Stock Summary'), 'Stored query returns local inventory breakdown');
+
+// Test D: Google Gemini AI Query Response (Engine is 'gemini')
+const geminiQueryResp = await aiAgent.queryAIAssistant({
+  userQuery: 'Why does a motorcycle vibrate at high speeds? Answer in 2 points.',
+  parts: (await db.fetchParts()).data,
+  invoices: [],
+  lang: 'en'
+});
+assert(geminiQueryResp.engine === 'gemini', 'Non-stored bike troubleshooting query routed to Google Gemini AI');
+assert(geminiQueryResp.text.length > 20, 'Gemini AI generated detailed response');
+assert(typeof geminiQueryResp.model === 'string' && geminiQueryResp.model.includes('gemini'), `Gemini responded using active model: ${geminiQueryResp.model}`);
+
+// Test E: Malayalam Google Gemini AI Response
+const geminiMlResp = await aiAgent.queryAIAssistant({
+  userQuery: 'ബൈക്ക് സ്റ്റാർട്ട് ആവാത്തതിന് പ്രധാന കാരണങ്ങൾ എന്തൊക്കെ?',
+  parts: (await db.fetchParts()).data,
+  invoices: [],
+  lang: 'ml'
+});
+assert(geminiMlResp.engine === 'gemini', 'Malayalam mechanic question routed to Google Gemini AI');
+assert(geminiMlResp.text.length > 20, 'Gemini AI returned fluent Malayalam diagnosis');
+
+// Test F: Custom Gemini Key Storage
+aiAgent.saveStoredGeminiKey('AIzaSyCustomTestKey12345');
+const storedCustomKey = aiAgent.getStoredGeminiKey();
+assert(storedCustomKey.key === 'AIzaSyCustomTestKey12345' && storedCustomKey.isCustom === true, 'User custom Gemini key saved and retrieved');
+aiAgent.removeStoredGeminiKey();
+const defaultKeyAgain = aiAgent.getStoredGeminiKey();
+assert(defaultKeyAgain.isCustom === false, 'Reset to default Gemini configuration key works properly');
 
 console.log('\n=======================================');
 console.log(`TOTAL TESTS: ${testsPassed + testsFailed}`);

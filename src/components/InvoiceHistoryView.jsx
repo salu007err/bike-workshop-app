@@ -7,6 +7,7 @@ import {
   X,
   ChevronRight,
   Edit2,
+  Gauge,
 } from 'lucide-react';
 import { formatDate } from '../services/invoiceService';
 
@@ -118,8 +119,16 @@ export default function InvoiceHistoryView({
                     )}
                   </div>
 
-                  <div className="text-base sm:text-lg font-black text-slate-900 tracking-wide truncate">
-                    {(inv.vehicle_number || '').toUpperCase()}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-base sm:text-lg font-black text-slate-900 tracking-wide truncate">
+                      {(inv.vehicle_number || '').toUpperCase()}
+                    </span>
+                    {inv.km_reading && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        <Gauge className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+                        {inv.km_reading.toUpperCase().includes('KM') ? inv.km_reading : `${inv.km_reading} KM`}
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-[11px] text-slate-400 font-medium">
