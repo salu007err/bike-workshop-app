@@ -6,7 +6,7 @@ import {
   Save,
   CheckCircle,
   Globe,
-  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { clearAllLocalData } from '../services/db';
 
@@ -36,19 +36,6 @@ export default function SettingsModal({
       lang === 'ml' ? 'വർക്ക്ഷോപ്പ് പേര് സേവ് ചെയ്തു!' : 'Workshop name saved!'
     );
     setTimeout(() => setSaveMessage(''), 3000);
-  };
-
-  const handleResetAllData = () => {
-    if (window.confirm(t.settings.resetConfirm)) {
-      clearAllLocalData();
-      onRefreshData();
-      setSaveMessage(
-        lang === 'ml'
-          ? 'എല്ലാ ഡാറ്റയും മായ്ച്ചു.'
-          : 'All data cleared. Fresh start.'
-      );
-      setTimeout(() => setSaveMessage(''), 4000);
-    }
   };
 
   return (
@@ -136,44 +123,35 @@ export default function SettingsModal({
             </button>
           </form>
 
-          {/* 3. DATABASE STATUS BADGE */}
-          <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-blue-600" />
-              <div>
-                <div className="text-[10px] font-bold uppercase text-slate-400">Database</div>
-                <div className="text-xs font-black text-slate-800">
-                  {isSupabaseConnected ? 'Supabase PostgreSQL' : 'Local Offline Mode'}
+          {/* 3. PURE SUPABASE CLOUD STATUS */}
+          <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-emerald-600" />
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-slate-400">Database</div>
+                  <div className="text-xs font-black text-slate-800">Supabase Cloud PostgreSQL</div>
                 </div>
               </div>
+
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-emerald-100 text-emerald-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                100% Cloud Only
+              </span>
             </div>
 
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                isSupabaseConnected
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-slate-200 text-slate-600'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isSupabaseConnected ? 'bg-emerald-500' : 'bg-slate-400'
-                }`}
-              />
-              {isSupabaseConnected ? 'Live' : 'Offline'}
-            </span>
-          </div>
-
-          {/* 4. CLEAR ALL DATA */}
-          <div className="pt-1 border-t border-slate-100 flex justify-end">
-            <button
-              type="button"
-              onClick={handleResetAllData}
-              className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 p-1 rounded-lg hover:bg-red-50 cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{t.settings.resetData}</span>
-            </button>
+            <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px]">
+              <span className="text-slate-500 font-medium">Project: peqiwojcxtklbbvfctxt</span>
+              <a
+                href="https://supabase.com/dashboard/project/peqiwojcxtklbbvfctxt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1"
+              >
+                <span>Dashboard</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
 

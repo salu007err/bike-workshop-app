@@ -8,6 +8,7 @@ import InvoiceHistoryView from './components/InvoiceHistoryView';
 import InvoiceDetailModal from './components/InvoiceDetailModal';
 import SettingsModal from './components/SettingsModal';
 import AIAssistantModal from './components/AIAssistantModal';
+import { AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
 import {
   fetchParts,
   addPart,
@@ -50,11 +51,12 @@ export default function App() {
   const [workshopConfig, setWorkshopConfig] = useState(getWorkshopConfig());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const [isTableMissing, setIsTableMissing] = useState(false);
 
   // AI Assistant modal state
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
-  // Data states (Clean Production Ready)
+  // Data states (Pure Supabase Live State)
   const [parts, setParts] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [isLoadingParts, setIsLoadingParts] = useState(true);
@@ -69,10 +71,10 @@ export default function App() {
 
   const showToast = (message, type = 'success') => {
     setToastMessage({ message, type });
-    setTimeout(() => setToastMessage(null), 4000);
+    setTimeout(() => setToastMessage(null), 4500);
   };
 
-  // Check Supabase & load data
+  // Check Supabase & load pure cloud data
   const loadData = async () => {
     setIsLoadingParts(true);
     const client = getSupabaseClient();
@@ -82,9 +84,15 @@ export default function App() {
       const partsRes = await fetchParts();
       if (partsRes.success) {
         setParts(partsRes.data || []);
+        setIsTableMissing(false);
+      } else {
+        if (partsRes.isTableMissing) {
+          setIsTableMissing(true);
+        }
+        console.warn('Supabase parts fetch:', partsRes.error);
       }
     } catch (err) {
-      console.error('Error loading parts:', err);
+      console.error('Error loading parts from Supabase:', err);
     } finally {
       setIsLoadingParts(false);
     }
@@ -93,9 +101,13 @@ export default function App() {
       const invRes = await fetchInvoices();
       if (invRes.success) {
         setInvoices(invRes.data || []);
+      } else {
+        if (invRes.isTableMissing) {
+          setIsTableMissing(true);
+        }
       }
     } catch (err) {
-      console.error('Error loading invoices:', err);
+      console.error('Error loading invoices from Supabase:', err);
     }
   };
 
@@ -103,17 +115,18 @@ export default function App() {
     loadData();
   }, []);
 
-  // Stock operations
+  // Stock operations (Direct Supabase)
   const handleAddPart = async (partData) => {
     const res = await addPart(partData);
     if (res.success) {
       showToast(
         lang === 'ml'
-          ? `"${partData.name}" സ്റ്റോക്കിലേക്ക് ചേർത്തു`
-          : `Added "${partData.name}" to stock`
+          ? `"${partData.name}" ക്ലൗഡ് സ്റ്റോക്കിലേക്ക് ചേർത്തു`
+          : `Added "${partData.name}" to Supabase`
       );
       await loadData();
     } else {
+      if (res.isTableMissing) setIsTableMissing(true);
       showToast(res.error || (lang === 'ml' ? 'പാർട്ട് ചേർക്കാൻ കഴിഞ്ഞില്ല' : 'Failed to add part'), 'error');
     }
   };
@@ -138,7 +151,7 @@ export default function App() {
       showToast(
         lang === 'ml'
           ? `${addQty} എണ്ണം സ്റ്റോക്കിലേക്ക് കൂട്ടി!`
-          : `Added ${addQty} unit(s) to stock!`
+          : `Added ${addQty} unit(s) to Supabase stock!`
       );
       await loadData();
     } else {
@@ -149,14 +162,14 @@ export default function App() {
   const handleDeletePart = async (id) => {
     const res = await deletePart(id);
     if (res.success) {
-      showToast(lang === 'ml' ? 'പാർട്ട് ഒഴിവാക്കി' : 'Part deleted from stock');
+      showToast(lang === 'ml' ? 'പാർട്ട് ഒഴിവാക്കി' : 'Part deleted from Supabase');
       await loadData();
     } else {
       showToast(res.error || (lang === 'ml' ? 'ഡിലീറ്റ് ചെയ്യാൻ കഴിഞ്ഞില്ല' : 'Failed to delete part'), 'error');
     }
   };
 
-  // Invoice creation
+  // Invoice creation (Direct Supabase)
   const handleCreateInvoice = async ({ vehicleNumber, items, totalAmount }) => {
     setIsCreatingInvoice(true);
     try {
@@ -170,14 +183,14 @@ export default function App() {
       if (res.success) {
         showToast(
           lang === 'ml'
-            ? `ബിൽ #${res.data.invoice_number} തയ്യാറായി!`
-            : `Invoice #${res.data.invoice_number} created!`
+            ? `ബിൽ #${res.data.invoice_number} സുപാബേസിൽ സേവ് ചെയ്തു!`
+            : `Invoice #${res.data.invoice_number} saved to Supabase!`
         );
         await loadData();
         setActiveInvoice(res.data);
         return true;
       } else {
-        showToast(res.error || (lang === 'ml' ? 'ബിൽ ഉണ്ടാക്കാൻ കഴിഞ്ഞില്ല' : 'Failed to create invoice'), 'error');
+        showToast(res.error || (lang === 'ml' ? 'ബിൽ ഉണ്ടാക്കാൻ കഴിഞ്ഞില്ല' : 'Failed to create invoice in Supabase'), 'error');
         return false;
       }
     } catch (err) {
@@ -188,14 +201,14 @@ export default function App() {
     }
   };
 
-  // Invoice cancellation
+  // Invoice cancellation (Direct Supabase)
   const handleCancelInvoice = async (invoiceId) => {
     const res = await cancelInvoice(invoiceId);
     if (res.success) {
       showToast(
         lang === 'ml'
-          ? 'ബിൽ റദ്ദാക്കി! പാർട്സുകൾ തിരികെ സ്റ്റോക്കിലേക്ക് ചേർത്തു.'
-          : 'Invoice cancelled! Stock restored.'
+          ? 'ബിൽ റദ്ദാക്കി! സുപാബേസ് സ്റ്റോക്ക് തിരികെ ചേർത്തു.'
+          : 'Invoice cancelled! Supabase stock restored.'
       );
       await loadData();
       if (activeInvoice && activeInvoice.id === invoiceId) {
@@ -224,7 +237,40 @@ export default function App() {
         t={t}
       />
 
-      {/* 2. GLOBAL FLOATING TOAST NOTIFICATION */}
+      {/* 2. SUPABASE SETUP REQUIRED BANNER (If tables not yet created) */}
+      {isTableMissing && (
+        <div className="bg-amber-500 text-slate-900 px-4 py-2.5 shadow-md flex items-center justify-between gap-3 text-xs sm:text-sm font-bold no-print">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle className="w-5 h-5 text-slate-900 flex-shrink-0" />
+            <span className="truncate">
+              {lang === 'ml'
+                ? 'സുപാബേസ് ടേബിളുകൾ തയ്യാറായിട്ടില്ല. SQL റൺ ചെയ്യുക.'
+                : 'Supabase setup required: Database tables not created yet.'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <a
+              href="https://supabase.com/dashboard/project/peqiwojcxtklbbvfctxt/sql/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-slate-900 text-amber-300 hover:text-white px-3 py-1 rounded-lg text-xs font-black flex items-center gap-1 shadow-sm"
+            >
+              <span>{lang === 'ml' ? 'SQL തുറക്കുക' : 'Run SQL'}</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+            <button
+              onClick={loadData}
+              className="p-1 text-slate-900 hover:text-slate-800"
+              title="Refresh"
+              aria-label="Refresh connection"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. GLOBAL FLOATING TOAST NOTIFICATION */}
       {toastMessage && (
         <div className="fixed top-16 right-3 left-3 sm:left-auto sm:right-4 z-50 sm:max-w-sm animate-in slide-in-from-top-4 duration-200 no-print">
           <div
@@ -239,7 +285,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. MAIN CONTENT (SAFE BOTTOM PADDING FOR BOTTOM NAV) */}
+      {/* 4. MAIN CONTENT */}
       <main className="flex-1 pb-24 sm:pb-20">
         {currentSection === 'home' && (
           <HomeView
@@ -291,7 +337,7 @@ export default function App() {
         )}
       </main>
 
-      {/* 4. MODERN MOBILE BOTTOM NAVIGATION BAR (INSTANT 1-TAP ACCESS) */}
+      {/* 5. MOBILE BOTTOM NAVIGATION */}
       <BottomNav
         currentSection={currentSection}
         onSelectSection={(sec) => setCurrentSection(sec)}
@@ -302,7 +348,7 @@ export default function App() {
         lang={lang}
       />
 
-      {/* 5. FREE AI ASSISTANT MODAL (WHATSAPP-STYLE BOTTOM SHEET) */}
+      {/* 6. AI ASSISTANT MODAL */}
       <AIAssistantModal
         isOpen={isAIAssistantOpen}
         onClose={() => setIsAIAssistantOpen(false)}
@@ -312,7 +358,7 @@ export default function App() {
         t={t}
       />
 
-      {/* 6. INVOICE DETAIL & SHARING MODAL (ONE-TAP WHATSAPP & PDF) */}
+      {/* 7. INVOICE DETAIL MODAL */}
       <InvoiceDetailModal
         isOpen={!!activeInvoice}
         onClose={() => setActiveInvoice(null)}
@@ -327,7 +373,7 @@ export default function App() {
         t={t}
       />
 
-      {/* 7. SETTINGS MODAL */}
+      {/* 8. SETTINGS MODAL */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

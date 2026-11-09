@@ -1,28 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from '../config/supabaseConfig.js';
 
-// Configuration keys in localStorage (Only user workshop preferences & clean production data)
-const LOCAL_STORAGE_PARTS_KEY = 'bike_workshop_parts_prod';
-const LOCAL_STORAGE_INVOICES_KEY = 'bike_workshop_invoices_prod';
-const LOCAL_STORAGE_WORKSHOP_KEY = 'bike_workshop_config_prod';
-
-// Clean up any legacy API keys that may have been stored in localStorage previously
+// Actively clear all legacy local storage data keys on load
 try {
-  localStorage.removeItem('bike_workshop_supabase_credentials');
-  localStorage.removeItem('bike_workshop_gemini_key');
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('bike_workshop_parts_prod');
+    localStorage.removeItem('bike_workshop_invoices_prod');
+    localStorage.removeItem('bike_workshop_parts');
+    localStorage.removeItem('bike_workshop_invoices');
+    localStorage.removeItem('bike_workshop_supabase_credentials');
+    localStorage.removeItem('bike_workshop_gemini_key');
+  }
 } catch (e) {
   // ignore
 }
 
-// Initial stock data starts completely clean for production
-const DEFAULT_PARTS = [];
-
 /**
  * Resolves Supabase credentials purely from the dedicated config file or .env variables.
- * Zero API keys are stored in or accepted from browser localStorage.
  */
 export function getStoredSupabaseCredentials() {
-  // 1. Check hardcoded configuration in src/config/supabaseConfig.js
   if (
     SUPABASE_CONFIG?.SUPABASE_URL &&
     SUPABASE_CONFIG?.SUPABASE_ANON_KEY &&
@@ -37,7 +33,6 @@ export function getStoredSupabaseCredentials() {
     };
   }
 
-  // 2. Check environment variables (.env or Cloudflare Pages env)
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : undefined;
   const envKey = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : undefined;
   if (
@@ -54,23 +49,31 @@ export function getStoredSupabaseCredentials() {
 }
 
 let supabaseInstance = null;
+
+export function setSupabaseClient(client) {
+  supabaseInstance = client;
+}
+
 export function getSupabaseClient() {
+  if (supabaseInstance) return supabaseInstance;
   const creds = getStoredSupabaseCredentials();
   if (!creds) return null;
-  if (!supabaseInstance || supabaseInstance._url !== creds.url) {
-    supabaseInstance = createClient(creds.url, creds.key);
-    supabaseInstance._url = creds.url;
-  }
+  supabaseInstance = createClient(creds.url, creds.key);
+  supabaseInstance._url = creds.url;
   return supabaseInstance;
 }
 
-// ---------------- Workshop Name Config ----------------
+// ---------------- Workshop Name Configuration (Supabase + Quick Cache) ----------------
+const WORKSHOP_NAME_CACHE_KEY = 'bike_workshop_name_cache';
+
 export function getWorkshopConfig() {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_WORKSHOP_KEY);
-    if (raw) return JSON.parse(raw);
+    if (typeof localStorage !== 'undefined') {
+      const cached = localStorage.getItem(WORKSHOP_NAME_CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+    }
   } catch (e) {
-    console.error('Failed to parse workshop config', e);
+    // ignore
   }
   return {
     workshopName: 'BIKE WORKSHOP',
@@ -79,66 +82,100 @@ export function getWorkshopConfig() {
   };
 }
 
-export function saveWorkshopConfig(config) {
-  localStorage.setItem(LOCAL_STORAGE_WORKSHOP_KEY, JSON.stringify(config));
-}
+export async function fetchWorkshopConfigFromSupabase() {
+  const supabase = getSupabaseClient();
+  if (!supabase) return getWorkshopConfig();
 
-// ---------------- LocalStorage Fallback Layer ----------------
-function getLocalParts() {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_PARTS_KEY);
-    if (!raw) {
-      localStorage.setItem(LOCAL_STORAGE_PARTS_KEY, JSON.stringify(DEFAULT_PARTS));
-      return DEFAULT_PARTS;
+    const { data, error } = await supabase
+      .from('workshop_settings')
+      .select('*')
+      .eq('id', 'default')
+      .maybeSingle();
+
+    if (!error && data) {
+      const config = {
+        workshopName: data.workshop_name || 'BIKE WORKSHOP',
+        phone: data.phone || '',
+        address: data.address || '',
+      };
+      saveWorkshopConfig(config);
+      return config;
     }
-    return JSON.parse(raw);
   } catch (e) {
-    return DEFAULT_PARTS;
+    // ignore
   }
+  return getWorkshopConfig();
 }
 
-function saveLocalParts(parts) {
-  localStorage.setItem(LOCAL_STORAGE_PARTS_KEY, JSON.stringify(parts));
-}
-
-function getLocalInvoices() {
+export function saveWorkshopConfig(config) {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_INVOICES_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(WORKSHOP_NAME_CACHE_KEY, JSON.stringify(config));
+    }
   } catch (e) {
-    return [];
+    // ignore
   }
-}
 
-function saveLocalInvoices(invoices) {
-  localStorage.setItem(LOCAL_STORAGE_INVOICES_KEY, JSON.stringify(invoices));
+  // Also sync to Supabase asynchronously if table exists
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    supabase
+      .from('workshop_settings')
+      .upsert({
+        id: 'default',
+        workshop_name: config.workshopName || 'BIKE WORKSHOP',
+        phone: config.phone || '',
+        address: config.address || '',
+        updated_at: new Date().toISOString(),
+      })
+      .then(() => {})
+      .catch(() => {});
+  }
 }
 
 export function clearAllLocalData() {
-  localStorage.removeItem(LOCAL_STORAGE_PARTS_KEY);
-  localStorage.removeItem(LOCAL_STORAGE_INVOICES_KEY);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('bike_workshop_parts_prod');
+      localStorage.removeItem('bike_workshop_invoices_prod');
+      localStorage.removeItem('bike_workshop_parts');
+      localStorage.removeItem('bike_workshop_invoices');
+      localStorage.removeItem(WORKSHOP_NAME_CACHE_KEY);
+    }
+  } catch (e) {
+    // ignore
+  }
 }
 
-// ---------------- High Level Service API ----------------
+// ---------------- Pure Supabase CRUD API ----------------
 
 export async function fetchParts() {
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('parts')
-        .select('*')
-        .order('name', { ascending: true });
-      if (error) throw error;
-      return { success: true, data: data || [], source: 'supabase' };
-    } catch (err) {
-      console.warn('Supabase fetchParts failed, falling back to local storage:', err.message);
-    }
+  if (!supabase) {
+    return { success: false, error: 'Supabase client is not initialized.' };
   }
-  // Local fallback
-  const parts = getLocalParts();
-  parts.sort((a, b) => a.name.localeCompare(b.name));
-  return { success: true, data: parts, source: 'local' };
+
+  try {
+    const { data, error } = await supabase
+      .from('parts')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      const isMissing = error.code === 'PGRST205' || (error.message || '').includes('schema cache');
+      return {
+        success: false,
+        error: error.message,
+        isTableMissing: isMissing,
+        source: 'supabase',
+      };
+    }
+
+    return { success: true, data: data || [], source: 'supabase' };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
+  }
 }
 
 export async function addPart({ name, price, quantity, note = '' }) {
@@ -152,33 +189,23 @@ export async function addPart({ name, price, quantity, note = '' }) {
   }
 
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('parts')
-        .insert([{ name: cleanName, price: numPrice, quantity: numQty, note: cleanNote }])
-        .select()
-        .single();
-      if (error) throw error;
-      return { success: true, data, source: 'supabase' };
-    } catch (err) {
-      console.warn('Supabase addPart failed, using local fallback:', err.message);
-    }
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
   }
 
-  // Local fallback
-  const parts = getLocalParts();
-  const newPart = {
-    id: 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-    name: cleanName,
-    price: numPrice,
-    quantity: numQty,
-    note: cleanNote,
-    created_at: new Date().toISOString(),
-  };
-  parts.push(newPart);
-  saveLocalParts(parts);
-  return { success: true, data: newPart, source: 'local' };
+  try {
+    const { data, error } = await supabase
+      .from('parts')
+      .insert([{ name: cleanName, price: numPrice, quantity: numQty, note: cleanNote }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, source: 'supabase' };
+  } catch (err) {
+    const isMissing = err.code === 'PGRST205' || (err.message || '').includes('schema cache');
+    return { success: false, error: err.message, isTableMissing: isMissing, source: 'supabase' };
+  }
 }
 
 export async function updatePart(id, { name, price, quantity, note = '' }) {
@@ -192,37 +219,29 @@ export async function updatePart(id, { name, price, quantity, note = '' }) {
   }
 
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('parts')
-        .update({ name: cleanName, price: numPrice, quantity: numQty, note: cleanNote, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return { success: true, data, source: 'supabase' };
-    } catch (err) {
-      console.warn('Supabase updatePart failed, using local fallback:', err.message);
-    }
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
   }
 
-  // Local fallback
-  const parts = getLocalParts();
-  const index = parts.findIndex((p) => String(p.id) === String(id));
-  if (index === -1) {
-    return { success: false, error: 'Part not found' };
+  try {
+    const { data, error } = await supabase
+      .from('parts')
+      .update({
+        name: cleanName,
+        price: numPrice,
+        quantity: numQty,
+        note: cleanNote,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, source: 'supabase' };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
   }
-  parts[index] = {
-    ...parts[index],
-    name: cleanName,
-    price: numPrice,
-    quantity: numQty,
-    note: cleanNote,
-    updated_at: new Date().toISOString(),
-  };
-  saveLocalParts(parts);
-  return { success: true, data: parts[index], source: 'local' };
 }
 
 export async function addStockQuantity(id, additionalQuantity) {
@@ -232,88 +251,87 @@ export async function addStockQuantity(id, additionalQuantity) {
   }
 
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      // Fetch current quantity
-      const { data: part, error: fetchErr } = await supabase
-        .from('parts')
-        .select('quantity')
-        .eq('id', id)
-        .single();
-      if (fetchErr) throw fetchErr;
-
-      const newQty = (part.quantity || 0) + addQty;
-      const { data, error: updateErr } = await supabase
-        .from('parts')
-        .update({ quantity: newQty, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-      if (updateErr) throw updateErr;
-
-      return { success: true, data, source: 'supabase' };
-    } catch (err) {
-      console.warn('Supabase addStockQuantity failed, using local fallback:', err.message);
-    }
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
   }
 
-  // Local fallback
-  const parts = getLocalParts();
-  const part = parts.find((p) => String(p.id) === String(id));
-  if (!part) {
-    return { success: false, error: 'Part not found' };
+  try {
+    // 1. Fetch current quantity from Supabase
+    const { data: part, error: fetchErr } = await supabase
+      .from('parts')
+      .select('quantity')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+
+    const newQty = (part.quantity || 0) + addQty;
+
+    // 2. Update stock quantity in Supabase
+    const { data, error: updateErr } = await supabase
+      .from('parts')
+      .update({ quantity: newQty, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+    return { success: true, data, source: 'supabase' };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
   }
-  part.quantity = (part.quantity || 0) + addQty;
-  saveLocalParts(parts);
-  return { success: true, data: part, source: 'local' };
 }
 
 export async function deletePart(id) {
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const { error } = await supabase.from('parts').delete().eq('id', id);
-      if (error) throw error;
-      return { success: true, source: 'supabase' };
-    } catch (err) {
-      console.warn('Supabase deletePart failed, using local fallback:', err.message);
-    }
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
   }
 
-  // Local fallback
-  const parts = getLocalParts();
-  const filtered = parts.filter((p) => String(p.id) !== String(id));
-  saveLocalParts(filtered);
-  return { success: true, source: 'local' };
+  try {
+    const { error } = await supabase.from('parts').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true, source: 'supabase' };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
+  }
 }
 
-// ---------------- Invoices ----------------
+// ---------------- Invoices (Pure Supabase) ----------------
 
 export async function fetchInvoices() {
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select(`
-          *,
-          items:invoice_items(*)
-        `)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return { success: true, data: data || [], source: 'supabase' };
-    } catch (err) {
-      console.warn('Supabase fetchInvoices failed, using local fallback:', err.message);
-    }
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
   }
 
-  const invoices = getLocalInvoices();
-  invoices.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
-  return { success: true, data: invoices, source: 'local' };
+  try {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select(`
+        *,
+        items:invoice_items(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      const isMissing = error.code === 'PGRST205' || (error.message || '').includes('schema cache');
+      return {
+        success: false,
+        error: error.message,
+        isTableMissing: isMissing,
+        source: 'supabase',
+      };
+    }
+
+    return { success: true, data: data || [], source: 'supabase' };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
+  }
 }
 
 /**
- * Creates an invoice with atomic stock reduction.
+ * Creates an invoice in Supabase with atomic stock reduction.
  */
 export async function createInvoiceWithStockDeduction({
   vehicleNumber,
@@ -345,260 +363,196 @@ export async function createInvoiceWithStockDeduction({
   }
 
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const invoiceNumber = 'INV-' + Date.now().toString().slice(-6);
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
+  }
 
-      const rpcPayload = {
-        p_invoice_number: invoiceNumber,
-        p_vehicle_number: cleanVehicle,
-        p_date: date,
-        p_total_amount: totalAmount,
-        p_items: items.map((it) => ({
-          part_id: it.part_id || null,
-          description: it.description,
-          quantity: it.quantity,
-          price: it.price,
-          item_type: it.item_type || (it.part_id ? 'part' : 'work'),
-        })),
-      };
+  try {
+    const invoiceNumber = 'INV-' + Date.now().toString().slice(-6);
 
-      const { data: rpcData, error: rpcErr } = await supabase.rpc(
-        'create_invoice_with_stock_deduction',
-        rpcPayload
-      );
-
-      if (!rpcErr && rpcData && rpcData.success) {
-        const { data: invData } = await supabase
-          .from('invoices')
-          .select('*, items:invoice_items(*)')
-          .eq('id', rpcData.invoice_id)
-          .single();
-
-        return {
-          success: true,
-          data: invData || {
-            id: rpcData.invoice_id,
-            invoice_number: invoiceNumber,
-            vehicle_number: cleanVehicle,
-            date,
-            total_amount: totalAmount,
-            invoice_status: 'confirmed',
-            items,
-            workshop_name: workshopName,
-          },
-          source: 'supabase',
-        };
-      }
-
-      // Supabase manual transaction fallback
-      for (const item of items) {
-        if (item.item_type === 'part' && item.part_id) {
-          const { data: part, error: pErr } = await supabase
-            .from('parts')
-            .select('id, name, quantity')
-            .eq('id', item.part_id)
-            .single();
-          if (pErr || !part) {
-            throw new Error(`Part not found: ${item.description}`);
-          }
-          if ((part.quantity || 0) < item.quantity) {
-            throw new Error(
-              `Not enough stock for "${part.name}". Available: ${part.quantity}, Needed: ${item.quantity}`
-            );
-          }
-        }
-      }
-
-      const { data: newInv, error: invErr } = await supabase
-        .from('invoices')
-        .insert([
-          {
-            invoice_number: invoiceNumber,
-            vehicle_number: cleanVehicle,
-            date,
-            total_amount: totalAmount,
-            invoice_status: 'confirmed',
-          },
-        ])
-        .select()
-        .single();
-      if (invErr) throw invErr;
-
-      const insertItems = items.map((it) => ({
-        invoice_id: newInv.id,
+    // Try RPC procedure if available
+    const rpcPayload = {
+      p_invoice_number: invoiceNumber,
+      p_vehicle_number: cleanVehicle,
+      p_date: date,
+      p_total_amount: totalAmount,
+      p_items: items.map((it) => ({
         part_id: it.part_id || null,
         description: it.description,
         quantity: it.quantity,
         price: it.price,
         item_type: it.item_type || (it.part_id ? 'part' : 'work'),
-      }));
+      })),
+    };
 
-      const { error: itemsErr } = await supabase.from('invoice_items').insert(insertItems);
-      if (itemsErr) throw itemsErr;
+    const { data: rpcData, error: rpcErr } = await supabase.rpc(
+      'create_invoice_with_stock_deduction',
+      rpcPayload
+    );
 
-      for (const it of items) {
-        if (it.item_type === 'part' && it.part_id) {
-          const { data: part } = await supabase
-            .from('parts')
-            .select('quantity')
-            .eq('id', it.part_id)
-            .single();
-          if (part) {
-            const updatedStock = Math.max(0, (part.quantity || 0) - it.quantity);
-            await supabase.from('parts').update({ quantity: updatedStock }).eq('id', it.part_id);
-          }
-        }
-      }
+    if (!rpcErr && rpcData && rpcData.success) {
+      const { data: invData } = await supabase
+        .from('invoices')
+        .select('*, items:invoice_items(*)')
+        .eq('id', rpcData.invoice_id)
+        .single();
 
       return {
         success: true,
-        data: {
-          ...newInv,
-          items: insertItems,
+        data: invData || {
+          id: rpcData.invoice_id,
+          invoice_number: invoiceNumber,
+          vehicle_number: cleanVehicle,
+          date,
+          total_amount: totalAmount,
+          invoice_status: 'confirmed',
+          items,
           workshop_name: workshopName,
         },
         source: 'supabase',
       };
-    } catch (err) {
-      console.warn('Supabase invoice creation failed, using local storage fallback:', err.message);
-      // Continue to local storage fallback
     }
-  }
 
-  // Local Storage fallback
-  const localParts = getLocalParts();
+    // Direct multi-step Supabase insert
+    // 1. Verify part stocks in Supabase
+    for (const item of items) {
+      if (item.item_type === 'part' && item.part_id) {
+        const { data: part, error: pErr } = await supabase
+          .from('parts')
+          .select('id, name, quantity')
+          .eq('id', item.part_id)
+          .single();
 
-  for (const item of items) {
-    if (item.item_type === 'part' && item.part_id) {
-      const part = localParts.find((p) => String(p.id) === String(item.part_id));
-      if (!part) {
-        return { success: false, error: `Part "${item.description}" not found in stock.` };
-      }
-      if ((part.quantity || 0) < item.quantity) {
-        return {
-          success: false,
-          error: `Not enough stock for "${part.name}". Available: ${part.quantity}, Required: ${item.quantity}`,
-        };
-      }
-    }
-  }
-
-  for (const item of items) {
-    if (item.item_type === 'part' && item.part_id) {
-      const part = localParts.find((p) => String(p.id) === String(item.part_id));
-      if (part) {
-        part.quantity = Math.max(0, (part.quantity || 0) - item.quantity);
+        if (pErr || !part) {
+          throw new Error(`Part not found: ${item.description}`);
+        }
+        if ((part.quantity || 0) < item.quantity) {
+          throw new Error(
+            `Not enough stock for "${part.name}". Available: ${part.quantity}, Needed: ${item.quantity}`
+          );
+        }
       }
     }
-  }
-  saveLocalParts(localParts);
 
-  const invoices = getLocalInvoices();
-  const nextNum = 1000 + invoices.length + 1;
-  const invoiceNumber = `INV-${nextNum}`;
+    // 2. Insert invoice into Supabase
+    const { data: newInv, error: invErr } = await supabase
+      .from('invoices')
+      .insert([
+        {
+          invoice_number: invoiceNumber,
+          vehicle_number: cleanVehicle,
+          date,
+          total_amount: totalAmount,
+          invoice_status: 'confirmed',
+        },
+      ])
+      .select()
+      .single();
 
-  const newInvoice = {
-    id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-    invoice_number: invoiceNumber,
-    vehicle_number: cleanVehicle,
-    date,
-    total_amount: totalAmount,
-    invoice_status: 'confirmed',
-    workshop_name: workshopName,
-    created_at: new Date().toISOString(),
-    items: items.map((it, idx) => ({
-      id: 'item_' + Date.now() + '_' + idx,
+    if (invErr) throw invErr;
+
+    // 3. Insert invoice items into Supabase
+    const insertItems = items.map((it) => ({
+      invoice_id: newInv.id,
       part_id: it.part_id || null,
       description: it.description,
       quantity: it.quantity,
       price: it.price,
       item_type: it.item_type || (it.part_id ? 'part' : 'work'),
-    })),
-  };
+    }));
 
-  invoices.unshift(newInvoice);
-  saveLocalInvoices(invoices);
+    const { error: itemsErr } = await supabase.from('invoice_items').insert(insertItems);
+    if (itemsErr) throw itemsErr;
 
-  return { success: true, data: newInvoice, source: 'local' };
+    // 4. Deduct stock in Supabase
+    for (const it of items) {
+      if (it.item_type === 'part' && it.part_id) {
+        const { data: part } = await supabase
+          .from('parts')
+          .select('quantity')
+          .eq('id', it.part_id)
+          .single();
+
+        if (part) {
+          const updatedStock = Math.max(0, (part.quantity || 0) - it.quantity);
+          await supabase.from('parts').update({ quantity: updatedStock, updated_at: new Date().toISOString() }).eq('id', it.part_id);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        ...newInv,
+        items: insertItems,
+        workshop_name: workshopName,
+      },
+      source: 'supabase',
+    };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
+  }
 }
 
 /**
- * Restores deducted stock when an invoice is cancelled.
+ * Cancels invoice and restores deducted stock directly in Supabase.
  */
 export async function cancelInvoice(invoiceId) {
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc('cancel_invoice', {
-        p_invoice_id: invoiceId,
-      });
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
+  }
 
-      if (!rpcErr && rpcData && rpcData.success) {
-        return { success: true, source: 'supabase' };
-      }
+  try {
+    // 1. Try atomic RPC function
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('cancel_invoice', {
+      p_invoice_id: invoiceId,
+    });
 
-      const { data: invoice, error: invErr } = await supabase
-        .from('invoices')
-        .select('*, items:invoice_items(*)')
-        .eq('id', invoiceId)
-        .single();
+    if (!rpcErr && rpcData && rpcData.success) {
+      return { success: true, source: 'supabase' };
+    }
 
-      if (invErr || !invoice) {
-        throw new Error('Invoice not found');
-      }
+    // 2. Direct Supabase query and restoration
+    const { data: invoice, error: invErr } = await supabase
+      .from('invoices')
+      .select('*, items:invoice_items(*)')
+      .eq('id', invoiceId)
+      .single();
 
-      if (invoice.invoice_status === 'cancelled') {
-        return { success: false, error: 'Invoice has already been cancelled.' };
-      }
+    if (invErr || !invoice) {
+      throw new Error('Invoice not found in Supabase');
+    }
 
-      if (invoice.items) {
-        for (const item of invoice.items) {
-          if (item.item_type === 'part' && item.part_id) {
-            const { data: part } = await supabase
+    if (invoice.invoice_status === 'cancelled') {
+      return { success: false, error: 'Invoice has already been cancelled.' };
+    }
+
+    // Restore stock for part items in Supabase
+    if (invoice.items) {
+      for (const item of invoice.items) {
+        if (item.item_type === 'part' && item.part_id) {
+          const { data: part } = await supabase
+            .from('parts')
+            .select('quantity')
+            .eq('id', item.part_id)
+            .single();
+
+          if (part) {
+            const restoredQty = (part.quantity || 0) + (item.quantity || 0);
+            await supabase
               .from('parts')
-              .select('quantity')
-              .eq('id', item.part_id)
-              .single();
-            if (part) {
-              const restoredQty = (part.quantity || 0) + (item.quantity || 0);
-              await supabase.from('parts').update({ quantity: restoredQty }).eq('id', item.part_id);
-            }
+              .update({ quantity: restoredQty, updated_at: new Date().toISOString() })
+              .eq('id', item.part_id);
           }
         }
       }
-
-      await supabase.from('invoices').update({ invoice_status: 'cancelled' }).eq('id', invoiceId);
-      return { success: true, source: 'supabase' };
-    } catch (err) {
-      console.warn('Supabase cancelInvoice failed, falling back to local storage:', err.message);
     }
+
+    // Update invoice status to cancelled in Supabase
+    await supabase.from('invoices').update({ invoice_status: 'cancelled' }).eq('id', invoiceId);
+    return { success: true, source: 'supabase' };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
   }
-
-  // Local Storage cancellation
-  const invoices = getLocalInvoices();
-  const invoice = invoices.find((inv) => String(inv.id) === String(invoiceId));
-  if (!invoice) {
-    return { success: false, error: 'Invoice not found.' };
-  }
-
-  if (invoice.invoice_status === 'cancelled') {
-    return { success: false, error: 'This invoice is already cancelled.' };
-  }
-
-  const parts = getLocalParts();
-  for (const item of invoice.items || []) {
-    if (item.item_type === 'part' && item.part_id) {
-      const part = parts.find((p) => String(p.id) === String(item.part_id));
-      if (part) {
-        part.quantity = (part.quantity || 0) + item.quantity;
-      }
-    }
-  }
-  saveLocalParts(parts);
-
-  invoice.invoice_status = 'cancelled';
-  saveLocalInvoices(invoices);
-
-  return { success: true, source: 'local' };
 }
