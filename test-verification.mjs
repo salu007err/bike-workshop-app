@@ -119,7 +119,12 @@ const mockSupabase = {
           eq: (col, val) => {
             const inv = mockInvoicesTable.find((i) => String(i[col]) === String(val));
             if (inv) Object.assign(inv, fields);
-            return Promise.resolve({ error: null });
+            return {
+              select: () => ({
+                single: () => Promise.resolve({ data: inv || null, error: inv ? null : { message: 'Not found' } })
+              }),
+              then: (resolve) => resolve({ data: inv || null, error: inv ? null : { message: 'Not found' } })
+            };
           }
         })
       };
@@ -137,7 +142,20 @@ const mockSupabase = {
             }
           });
           return Promise.resolve({ error: null });
-        }
+        },
+        delete: () => ({
+          eq: (col, val) => {
+            for (let i = mockInvoiceItemsTable.length - 1; i >= 0; i--) {
+              if (String(mockInvoiceItemsTable[i][col]) === String(val)) {
+                mockInvoiceItemsTable.splice(i, 1);
+              }
+            }
+            mockInvoicesTable.forEach((inv) => {
+              if (String(inv.id) === String(val)) inv.items = [];
+            });
+            return Promise.resolve({ error: null });
+          }
+        })
       };
     }
     return {};
@@ -426,6 +444,103 @@ assert(rollerResults.length > 0 && rollerResults.some(p => p.name.includes('Roll
 // Autocomplete search with Malayalam query
 const mlResults = commonParts.searchCommonBikeParts('ക്ലച്ച്', 5);
 assert(mlResults.length > 0 && mlResults.some(p => p.name.toLowerCase().includes('clutch')), 'Malayalam autocomplete search "ക്ലച്ച്" returns Clutch Plate Set');
+
+// 16. Invoice Edit & Stock Reconciliation Verification
+console.log('\nTest Suite 15: Edit Saved Invoice & Reconcile Spare Part Stock');
+
+// Step A: Add a new spare part with 10 units
+const airFilterPart = await db.addPart({
+  name: 'Air Filter Element Royal Enfield',
+  price: 250,
+  quantity: 10,
+  part_number: '591240/B',
+  image_url: null,
+  note: 'Classic 350 / Hunter'
+});
+assert(airFilterPart.success === true, 'Added Air Filter Element with stock = 10');
+
+// Step B: Create an initial invoice with 2x Air Filter Element (stock becomes 8) and 1x Labor
+const initialInvoiceRes = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 CD 1234',
+  items: [
+    {
+      part_id: airFilterPart.data.id,
+      description: airFilterPart.data.name,
+      quantity: 2,
+      price: 250,
+      item_type: 'part'
+    },
+    {
+      part_id: null,
+      description: 'Filter Replacement Work',
+      quantity: 1,
+      price: 100,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 600
+});
+
+assert(initialInvoiceRes.success === true, 'Created initial invoice for KL 07 CD 1234 with 2x Air Filter');
+const postCreatePart = (await db.fetchParts()).data.find(p => p.id === airFilterPart.data.id);
+assert(postCreatePart.quantity === 8, `Stock after creating invoice is 8 (was 10, used 2)`);
+
+// Step C: Edit the invoice - change vehicle number to KL 07 CD 1234 (REVISED), increase Air Filter to 3, and add new work item
+const editInvoiceRes = await db.updateInvoiceWithStockDeduction({
+  invoiceId: initialInvoiceRes.data.id,
+  vehicleNumber: 'KL 07 CD 1234 (REVISED)',
+  items: [
+    {
+      part_id: airFilterPart.data.id,
+      description: airFilterPart.data.name,
+      quantity: 3,
+      price: 250,
+      item_type: 'part'
+    },
+    {
+      part_id: null,
+      description: 'Full Throttle Body Cleaning',
+      quantity: 1,
+      price: 250,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 1000
+});
+
+assert(editInvoiceRes.success === true, 'Successfully updated saved invoice');
+assert(editInvoiceRes.data.vehicle_number === 'KL 07 CD 1234 (REVISED)', 'Vehicle number successfully updated to KL 07 CD 1234 (REVISED)');
+assert(editInvoiceRes.data.total_amount === 1000, 'Total amount successfully updated to 1000');
+assert(editInvoiceRes.data.items.length === 2, 'Invoice items updated to 2 items');
+
+// Step D: Verify that stock was reconciled:
+// Initial stock was 10. Previous invoice had 2. Edited invoice has 3.
+// So new stock should be 10 - 3 = 7.
+const postEditPart = (await db.fetchParts()).data.find(p => p.id === airFilterPart.data.id);
+assert(postEditPart.quantity === 7, `Stock after editing invoice is 7 (was 8, restored 2 -> 10, deducted 3 -> 7)`);
+
+// Step E: Verify stock shortage check on edit - trying to update with 50 units (only 7+3=10 available)
+const excessiveQtyRes = await db.updateInvoiceWithStockDeduction({
+  invoiceId: initialInvoiceRes.data.id,
+  vehicleNumber: 'KL 07 CD 1234 (REVISED)',
+  items: [
+    {
+      part_id: airFilterPart.data.id,
+      description: airFilterPart.data.name,
+      quantity: 50,
+      price: 250,
+      item_type: 'part'
+    }
+  ],
+  totalAmount: 12500
+});
+
+assert(excessiveQtyRes.success === false, 'Excessive quantity edit rejected');
+assert(excessiveQtyRes.error.includes('Not enough stock'), 'Proper stock error returned on excessive quantity');
+
+// Verify stock is preserved at 7 after rejected edit
+const postRollbackPart = (await db.fetchParts()).data.find(p => p.id === airFilterPart.data.id);
+assert(postRollbackPart.quantity === 7, 'Stock preserved at 7 after rejected edit transaction');
 
 
 

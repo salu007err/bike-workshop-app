@@ -597,6 +597,158 @@ export async function createInvoiceWithStockDeduction({
 }
 
 /**
+ * Updates an existing invoice in Supabase and reconciles stock deductions.
+ */
+export async function updateInvoiceWithStockDeduction({
+  invoiceId,
+  vehicleNumber,
+  items,
+  totalAmount,
+  workshopName = 'BIKE WORKSHOP',
+}) {
+  const cleanVehicle = (vehicleNumber || '').toUpperCase().trim();
+  if (!cleanVehicle) {
+    return { success: false, error: 'Vehicle registration number is required' };
+  }
+  if (!items || items.length === 0) {
+    return { success: false, error: 'Please add at least one part or work item' };
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
+  }
+
+  try {
+    // 1. Fetch current invoice with original items
+    const { data: oldInvoice, error: fetchErr } = await supabase
+      .from('invoices')
+      .select('*, items:invoice_items(*)')
+      .eq('id', invoiceId)
+      .single();
+
+    if (fetchErr || !oldInvoice) {
+      throw new Error('Invoice not found in Supabase');
+    }
+
+    if (oldInvoice.invoice_status === 'cancelled') {
+      throw new Error('Cannot edit a cancelled invoice');
+    }
+
+    // 2. Temporarily restore stock for previous part items
+    if (oldInvoice.items && oldInvoice.items.length > 0) {
+      for (const oldIt of oldInvoice.items) {
+        if (oldIt.item_type === 'part' && oldIt.part_id) {
+          const { data: part } = await supabase
+            .from('parts')
+            .select('quantity')
+            .eq('id', oldIt.part_id)
+            .single();
+
+          if (part) {
+            const restoredQty = (part.quantity || 0) + (oldIt.quantity || 0);
+            await supabase
+              .from('parts')
+              .update({ quantity: restoredQty, updated_at: new Date().toISOString() })
+              .eq('id', oldIt.part_id);
+          }
+        }
+      }
+    }
+
+    // 3. Verify stock availability for new part items
+    for (const newItem of items) {
+      if (newItem.item_type === 'part' && newItem.part_id) {
+        const { data: part, error: pErr } = await supabase
+          .from('parts')
+          .select('id, name, quantity')
+          .eq('id', newItem.part_id)
+          .single();
+
+        if (pErr || !part) {
+          throw new Error(`Part not found: ${newItem.description}`);
+        }
+        if ((part.quantity || 0) < newItem.quantity) {
+          // Re-deduct old items if stock check fails
+          if (oldInvoice.items) {
+            for (const oldIt of oldInvoice.items) {
+              if (oldIt.item_type === 'part' && oldIt.part_id) {
+                const { data: p } = await supabase.from('parts').select('quantity').eq('id', oldIt.part_id).single();
+                if (p) {
+                  await supabase.from('parts').update({ quantity: Math.max(0, (p.quantity || 0) - oldIt.quantity) }).eq('id', oldIt.part_id);
+                }
+              }
+            }
+          }
+          throw new Error(
+            `Not enough stock for "${part.name}". Available: ${part.quantity}, Needed: ${newItem.quantity}`
+          );
+        }
+      }
+    }
+
+    // 4. Deduct new stock for all new parts
+    for (const newItem of items) {
+      if (newItem.item_type === 'part' && newItem.part_id) {
+        const { data: part } = await supabase
+          .from('parts')
+          .select('quantity')
+          .eq('id', newItem.part_id)
+          .single();
+
+        if (part) {
+          const newStock = Math.max(0, (part.quantity || 0) - newItem.quantity);
+          await supabase
+            .from('parts')
+            .update({ quantity: newStock, updated_at: new Date().toISOString() })
+            .eq('id', newItem.part_id);
+        }
+      }
+    }
+
+    // 5. Update invoice vehicle number and total
+    const { data: updatedInv, error: updateInvErr } = await supabase
+      .from('invoices')
+      .update({
+        vehicle_number: cleanVehicle,
+        total_amount: totalAmount,
+      })
+      .eq('id', invoiceId)
+      .select()
+      .single();
+
+    if (updateInvErr) throw updateInvErr;
+
+    // 6. Delete old invoice items and insert new ones
+    await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);
+
+    const newInsertItems = items.map((it) => ({
+      invoice_id: invoiceId,
+      part_id: it.part_id || null,
+      description: it.description,
+      quantity: it.quantity,
+      price: it.price,
+      item_type: it.item_type || (it.part_id ? 'part' : 'work'),
+    }));
+
+    const { error: insertItemsErr } = await supabase.from('invoice_items').insert(newInsertItems);
+    if (insertItemsErr) throw insertItemsErr;
+
+    return {
+      success: true,
+      data: {
+        ...updatedInv,
+        items: newInsertItems,
+        workshop_name: workshopName,
+      },
+      source: 'supabase',
+    };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
+  }
+}
+
+/**
  * Cancels invoice and restores deducted stock directly in Supabase.
  */
 export async function cancelInvoice(invoiceId) {

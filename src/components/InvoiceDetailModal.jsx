@@ -9,6 +9,7 @@ import {
   PlusCircle,
   FileText,
   Calendar,
+  Edit2,
 } from 'lucide-react';
 import {
   downloadInvoicePDF,
@@ -22,6 +23,7 @@ export default function InvoiceDetailModal({
   invoice,
   workshopName,
   onCancelInvoice,
+  onEditInvoice,
   onCreateNew,
   lang,
   t,
@@ -104,32 +106,44 @@ export default function InvoiceDetailModal({
 
         {/* 2. QUICK ACTIONS BAR (MOBILE POLISHED) */}
         <div className="bg-slate-50 border-b border-slate-200 p-3 sm:p-4 no-print flex-shrink-0 space-y-2">
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid ${!isCancelled && onEditInvoice ? 'grid-cols-4' : 'grid-cols-3'} gap-1.5 sm:gap-2`}>
             {/* WhatsApp Button (Primary Green) */}
             <button
               onClick={() => setShowPhonePrompt(!showPhonePrompt)}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] sm:text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
             >
-              <Share2 className="w-4 h-4" />
-              <span>WhatsApp</span>
+              <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="truncate">WhatsApp</span>
             </button>
 
             {/* Download PDF (Blue) */}
             <button
               onClick={handleDownload}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] sm:text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
               <span>PDF</span>
             </button>
+
+            {/* Edit Invoice Button (Amber) */}
+            {!isCancelled && onEditInvoice && (
+              <button
+                onClick={() => onEditInvoice(invoice)}
+                className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-sm transition-all cursor-pointer"
+                title={t.invoiceDetail.editInvoice}
+              >
+                <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate">{lang === 'ml' ? 'മാറ്റുക' : 'Edit'}</span>
+              </button>
+            )}
 
             {/* Print Button (Dark) */}
             <button
               onClick={handlePrint}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-[11px] sm:text-xs active:scale-95 transition-all cursor-pointer"
             >
-              <Printer className="w-4 h-4" />
-              <span>{lang === 'ml' ? 'പ്രിന്റ്' : 'Print'}</span>
+              <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="truncate">{lang === 'ml' ? 'പ്രിന്റ്' : 'Print'}</span>
             </button>
           </div>
 
@@ -266,6 +280,16 @@ export default function InvoiceDetailModal({
           )}
 
           <div className="flex items-center gap-2">
+            {!isCancelled && onEditInvoice && (
+              <button
+                onClick={() => onEditInvoice(invoice)}
+                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs active:scale-95 cursor-pointer"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>{lang === 'ml' ? 'മാറ്റം വരുത്തുക' : 'Edit Bill'}</span>
+              </button>
+            )}
+
             {onCreateNew && (
               <button
                 onClick={onCreateNew}

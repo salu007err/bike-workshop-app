@@ -17,6 +17,7 @@ import {
   deletePart,
   fetchInvoices,
   createInvoiceWithStockDeduction,
+  updateInvoiceWithStockDeduction,
   cancelInvoice,
   getWorkshopConfig,
   saveWorkshopConfig,
@@ -65,6 +66,9 @@ export default function App() {
 
   // Active invoice for preview / actions
   const [activeInvoice, setActiveInvoice] = useState(null);
+
+  // Invoice being edited
+  const [editingInvoice, setEditingInvoice] = useState(null);
 
   // Toast / notification banner
   const [toastMessage, setToastMessage] = useState(null);
@@ -217,6 +221,54 @@ export default function App() {
     }
   };
 
+  // Start editing a saved vehicle invoice
+  const handleStartEditInvoice = (inv) => {
+    setActiveInvoice(null);
+    setEditingInvoice(inv);
+    setCurrentSection('invoice');
+  };
+
+  const handleCancelEditInvoice = () => {
+    setEditingInvoice(null);
+  };
+
+  // Update existing invoice & reconcile stock (Direct Supabase)
+  const handleUpdateInvoice = async ({ invoiceId, vehicleNumber, items, totalAmount }) => {
+    setIsCreatingInvoice(true);
+    try {
+      const res = await updateInvoiceWithStockDeduction({
+        invoiceId,
+        vehicleNumber,
+        items,
+        totalAmount,
+        workshopName: workshopConfig.workshopName,
+      });
+
+      if (res.success) {
+        showToast(
+          lang === 'ml'
+            ? `ബിൽ #${res.data.invoice_number} മാറ്റങ്ങൾ സേവ് ചെയ്തു!`
+            : `Invoice #${res.data.invoice_number} updated in Supabase!`
+        );
+        await loadData();
+        setEditingInvoice(null);
+        setActiveInvoice(res.data);
+        return true;
+      } else {
+        showToast(
+          res.error || (lang === 'ml' ? 'ബിൽ മാറ്റാൻ കഴിഞ്ഞില്ല' : 'Failed to update invoice in Supabase'),
+          'error'
+        );
+        return false;
+      }
+    } catch (err) {
+      showToast(err.message || 'An unexpected error occurred', 'error');
+      return false;
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
+
   // Invoice cancellation (Direct Supabase)
   const handleCancelInvoice = async (invoiceId) => {
     const res = await cancelInvoice(invoiceId);
@@ -331,8 +383,14 @@ export default function App() {
         {currentSection === 'invoice' && (
           <CreateInvoiceView
             parts={parts}
-            onBack={() => setCurrentSection('home')}
+            onBack={() => {
+              setEditingInvoice(null);
+              setCurrentSection('home');
+            }}
             onCreateInvoice={handleCreateInvoice}
+            onUpdateInvoice={handleUpdateInvoice}
+            editingInvoice={editingInvoice}
+            onCancelEdit={handleCancelEditInvoice}
             onViewHistory={() => setCurrentSection('history')}
             isCreating={isCreatingInvoice}
             t={t}
@@ -347,6 +405,7 @@ export default function App() {
             onBack={() => setCurrentSection('invoice')}
             onSelectInvoice={(inv) => setActiveInvoice(inv)}
             onCancelInvoice={handleCancelInvoice}
+            onEditInvoice={handleStartEditInvoice}
             t={t}
             lang={lang}
           />
@@ -381,7 +440,9 @@ export default function App() {
         invoice={activeInvoice}
         workshopName={workshopConfig.workshopName}
         onCancelInvoice={handleCancelInvoice}
+        onEditInvoice={handleStartEditInvoice}
         onCreateNew={() => {
+          setEditingInvoice(null);
           setActiveInvoice(null);
           setCurrentSection('invoice');
         }}

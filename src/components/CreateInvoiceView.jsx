@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Plus,
@@ -15,6 +15,7 @@ import {
   Search,
   Hash,
   Loader2,
+  Edit2,
 } from 'lucide-react';
 import { fuzzyFilter } from '../services/searchUtils';
 
@@ -22,6 +23,9 @@ export default function CreateInvoiceView({
   parts,
   onBack,
   onCreateInvoice,
+  onUpdateInvoice,
+  editingInvoice = null,
+  onCancelEdit = null,
   onViewHistory,
   isCreating,
   t,
@@ -32,6 +36,26 @@ export default function CreateInvoiceView({
   const [error, setError] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync state if editing an existing invoice
+  useEffect(() => {
+    if (editingInvoice) {
+      setVehicleNumber(editingInvoice.vehicle_number || '');
+      if (Array.isArray(editingInvoice.items)) {
+        setItems(
+          editingInvoice.items.map((it, idx) => ({
+            id: it.id || `edit_item_${idx}_${Date.now()}`,
+            part_id: it.part_id || null,
+            description: it.description || '',
+            quantity: parseInt(it.quantity, 10) || 1,
+            price: parseFloat(it.price) || 0,
+            item_type: it.item_type || (it.part_id ? 'part' : 'work'),
+          }))
+        );
+      }
+      setError('');
+    }
+  }, [editingInvoice]);
 
   // Active Tab for adding: 'part' or 'work'
   const [itemTypeTab, setItemTypeTab] = useState('part');
@@ -75,13 +99,23 @@ export default function CreateInvoiceView({
     }
 
     const alreadyInBill = items
-      .filter((it) => it.part_id === selectedPart.id)
-      .reduce((s, it) => s + it.quantity, 0);
+      .filter((it) => String(it.part_id) === String(selectedPart.id))
+      .reduce((s, it) => s + (parseInt(it.quantity, 10) || 0), 0);
 
     const neededTotal = alreadyInBill + qty;
-    if (neededTotal > (selectedPart.quantity || 0)) {
+
+    // When editing an invoice, the parts already on that invoice are returned upon save,
+    // so available stock includes what was previously in editingInvoice.
+    const previouslyInEdit = editingInvoice?.items
+      ? editingInvoice.items
+          .filter((it) => String(it.part_id) === String(selectedPart.id))
+          .reduce((s, it) => s + (parseInt(it.quantity, 10) || 0), 0)
+      : 0;
+    const maxAvailable = (selectedPart.quantity || 0) + previouslyInEdit;
+
+    if (neededTotal > maxAvailable) {
       setError(
-        `${t.createInvoice.errPartStockPrefix} "${selectedPart.name}": ${selectedPart.quantity}.`
+        `${t.createInvoice.errPartStockPrefix} "${selectedPart.name}": ${maxAvailable}.`
       );
       return;
     }
@@ -162,9 +196,16 @@ export default function CreateInvoiceView({
           setError(`Part "${item.description}" not found in stock list.`);
           return;
         }
-        if ((part.quantity || 0) < item.quantity) {
+        const previouslyInEdit = editingInvoice?.items
+          ? editingInvoice.items
+              .filter((it) => String(it.part_id) === String(item.part_id))
+              .reduce((s, it) => s + (parseInt(it.quantity, 10) || 0), 0)
+          : 0;
+        const maxAvailable = (part.quantity || 0) + previouslyInEdit;
+
+        if (maxAvailable < item.quantity) {
           setError(
-            `Stock has changed! Available for "${part.name}" is ${part.quantity}, but bill requires ${item.quantity}.`
+            `Stock has changed! Available for "${part.name}" is ${maxAvailable}, but bill requires ${item.quantity}.`
           );
           return;
         }
@@ -182,18 +223,29 @@ export default function CreateInvoiceView({
     try {
       setIsSubmitting(true);
       setError('');
-      const success = await onCreateInvoice({
-        vehicleNumber: vehicleNumber.trim().toUpperCase(),
-        items,
-        totalAmount,
-      });
+      let success = false;
+      if (editingInvoice && onUpdateInvoice) {
+        success = await onUpdateInvoice({
+          invoiceId: editingInvoice.id,
+          vehicleNumber: vehicleNumber.trim().toUpperCase(),
+          items,
+          totalAmount,
+        });
+      } else {
+        success = await onCreateInvoice({
+          vehicleNumber: vehicleNumber.trim().toUpperCase(),
+          items,
+          totalAmount,
+        });
+      }
+
       if (success) {
         setShowConfirmModal(false);
         setVehicleNumber('');
         setItems([]);
       }
     } catch (err) {
-      setError(err?.message || 'Failed to create invoice');
+      setError(err?.message || (editingInvoice ? 'Failed to update invoice' : 'Failed to create invoice'));
     } finally {
       setIsSubmitting(false);
     }
@@ -207,7 +259,10 @@ export default function CreateInvoiceView({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <button
-            onClick={onBack}
+            onClick={() => {
+              if (editingInvoice && onCancelEdit) onCancelEdit();
+              onBack();
+            }}
             className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-95 transition-all shadow-xs flex-shrink-0"
             title={t.createInvoice.backHome}
             aria-label="Back"
@@ -216,7 +271,7 @@ export default function CreateInvoiceView({
           </button>
           <div className="min-w-0">
             <h2 className="text-base sm:text-xl font-black text-slate-900 tracking-tight leading-tight truncate">
-              {t.createInvoice.title}
+              {editingInvoice ? (t.createInvoice.editTitle || 'Edit Saved Invoice') : t.createInvoice.title}
             </h2>
             <p className="text-[11px] text-slate-500 font-semibold truncate">
               {items.length} {t.createInvoice.currentItems}
@@ -232,6 +287,38 @@ export default function CreateInvoiceView({
           <span>{lang === 'ml' ? 'പഴയ ബില്ലുകൾ' : 'Past Bills'}</span>
         </button>
       </div>
+
+      {/* Editing Invoice Notice Banner */}
+      {editingInvoice && (
+        <div className="p-3 sm:p-3.5 bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl flex items-center justify-between gap-3 text-amber-950 animate-in fade-in">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-amber-500 text-white rounded-xl flex-shrink-0">
+              <Edit2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-black uppercase tracking-wider text-amber-700">
+                {t.createInvoice.editingNotice || 'Editing invoice for bike'}
+              </div>
+              <div className="text-sm sm:text-base font-black text-slate-900 truncate">
+                {editingInvoice.vehicle_number} (#{editingInvoice.invoice_number})
+              </div>
+            </div>
+          </div>
+          {onCancelEdit && (
+            <button
+              type="button"
+              onClick={() => {
+                setVehicleNumber('');
+                setItems([]);
+                onCancelEdit();
+              }}
+              className="px-3 py-1.5 rounded-xl border border-amber-400 bg-white hover:bg-amber-50 text-amber-900 font-black text-xs active:scale-95 transition-all flex-shrink-0"
+            >
+              {t.createInvoice.cancelEdit || 'Cancel'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Global Error Alert */}
       {error && (
@@ -573,17 +660,29 @@ export default function CreateInvoiceView({
               type="button"
               onClick={handleInitiateConfirm}
               disabled={isCreating || isSubmitting || !vehicleNumber.trim()}
-              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-40 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap"
+              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-40 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap ${
+                editingInvoice
+                  ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30'
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
+              }`}
             >
               {isCreating || isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-white flex-shrink-0" />
-                  <span>{t.createInvoice.creating || 'Creating...'}</span>
+                  <span>
+                    {editingInvoice
+                      ? (t.createInvoice.updating || 'Updating...')
+                      : (t.createInvoice.creating || 'Creating...')}
+                  </span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
-                  <span>{lang === 'ml' ? 'ബിൽ ഉണ്ടാക്കുക' : 'Confirm Bill'}</span>
+                  <span>
+                    {editingInvoice
+                      ? (t.createInvoice.updateBtn || 'Update Invoice')
+                      : (lang === 'ml' ? 'ബിൽ ഉണ്ടാക്കുക' : 'Confirm Bill')}
+                  </span>
                 </>
               )}
             </button>
@@ -598,7 +697,11 @@ export default function CreateInvoiceView({
             <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <ShieldCheck className="w-5 h-5 text-emerald-400 stroke-[2.5] flex-shrink-0" />
-                <h3 className="text-base sm:text-lg font-black truncate">{t.createInvoice.confirmModalTitle}</h3>
+                <h3 className="text-base sm:text-lg font-black truncate">
+                  {editingInvoice
+                    ? (t.createInvoice.confirmUpdateModalTitle || 'Confirm Changes to Invoice & Stock')
+                    : t.createInvoice.confirmModalTitle}
+                </h3>
               </div>
               <button
                 onClick={() => setShowConfirmModal(false)}
@@ -656,17 +759,21 @@ export default function CreateInvoiceView({
                   type="button"
                   disabled={isCreating || isSubmitting}
                   onClick={handleFinalConfirm}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className={`w-full sm:flex-1 py-3 px-4 rounded-xl text-white font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                    editingInvoice
+                      ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/25'
+                      : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/25'
+                  }`}
                 >
                   {isCreating || isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-white flex-shrink-0" />
-                      <span>{t.createInvoice.creating}</span>
+                      <span>{editingInvoice ? (t.createInvoice.updating || 'Updating...') : t.createInvoice.creating}</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
-                      <span>{t.createInvoice.yesConfirm}</span>
+                      <span>{editingInvoice ? (t.createInvoice.yesUpdate || 'Yes, Save Changes') : t.createInvoice.yesConfirm}</span>
                     </>
                   )}
                 </button>

@@ -6,6 +6,7 @@ import {
   Calendar,
   X,
   ChevronRight,
+  Edit2,
 } from 'lucide-react';
 import { formatDate } from '../services/invoiceService';
 
@@ -13,6 +14,7 @@ export default function InvoiceHistoryView({
   invoices,
   onBack,
   onSelectInvoice,
+  onEditInvoice,
   onCancelInvoice,
   isLoading,
   t,
@@ -125,13 +127,29 @@ export default function InvoiceHistoryView({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                   <div className="text-right">
                     <div className="text-[10px] uppercase font-bold text-slate-400">Total</div>
                     <div className="text-lg sm:text-xl font-black text-slate-900">
                       ₹{(parseFloat(inv.total_amount) || 0).toFixed(0)}
                     </div>
                   </div>
+
+                  {!isCancelled && onEditInvoice && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditInvoice(inv);
+                      }}
+                      className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 active:scale-95 transition-all cursor-pointer"
+                      title={lang === 'ml' ? 'ബില്ലിൽ മാറ്റം വരുത്തുക' : 'Edit Bill'}
+                      aria-label="Edit invoice"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+
                   <div className="w-7 h-7 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center">
                     <ChevronRight className="w-4 h-4" />
                   </div>
