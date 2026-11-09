@@ -195,24 +195,66 @@ export async function addPart({ name, price, quantity, note = '', part_number = 
     return { success: false, error: 'Supabase client not connected' };
   }
 
+  // Base insert payload
+  const payload = {
+    name: cleanName,
+    price: numPrice,
+    quantity: numQty,
+    note: cleanNote,
+  };
+  if (cleanPartNumber) payload.part_number = cleanPartNumber;
+  if (cleanImageUrl) payload.image_url = cleanImageUrl;
+
   try {
     const { data, error } = await supabase
       .from('parts')
-      .insert([
-        {
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      // If column is missing in remote Supabase schema cache (PGRST204), auto-fallback to basic fields
+      if (
+        error.code === 'PGRST204' ||
+        (error.message || '').includes('column') ||
+        (error.message || '').includes('schema cache')
+      ) {
+        console.warn('Supabase parts schema missing columns. Retrying with basic fields.');
+        const fallbackPayload = {
           name: cleanName,
           price: numPrice,
           quantity: numQty,
           note: cleanNote,
-          part_number: cleanPartNumber,
-          image_url: cleanImageUrl,
-        },
-      ])
-      .select()
-      .single();
+        };
+        const { data: fbData, error: fbErr } = await supabase
+          .from('parts')
+          .insert([fallbackPayload])
+          .select()
+          .single();
 
-    if (error) throw error;
-    return { success: true, data, source: 'supabase' };
+        if (fbErr) throw fbErr;
+        return {
+          success: true,
+          data: {
+            ...fbData,
+            part_number: fbData?.part_number || null,
+            image_url: fbData?.image_url || null,
+          },
+          isSchemaUpgradeNeeded: true,
+          source: 'supabase',
+        };
+      }
+      throw error;
+    }
+    return {
+      success: true,
+      data: {
+        ...data,
+        part_number: data?.part_number || null,
+        image_url: data?.image_url || null,
+      },
+      source: 'supabase',
+    };
   } catch (err) {
     const isMissing = err.code === 'PGRST205' || (err.message || '').includes('schema cache');
     return { success: false, error: err.message, isTableMissing: isMissing, source: 'supabase' };
@@ -236,24 +278,69 @@ export async function updatePart(id, { name, price, quantity, note = '', part_nu
     return { success: false, error: 'Supabase client not connected' };
   }
 
+  const payload = {
+    name: cleanName,
+    price: numPrice,
+    quantity: numQty,
+    note: cleanNote,
+    updated_at: new Date().toISOString(),
+  };
+  if (cleanPartNumber) payload.part_number = cleanPartNumber;
+  if (cleanImageUrl) payload.image_url = cleanImageUrl;
+
   try {
     const { data, error } = await supabase
       .from('parts')
-      .update({
-        name: cleanName,
-        price: numPrice,
-        quantity: numQty,
-        note: cleanNote,
-        part_number: cleanPartNumber,
-        image_url: cleanImageUrl,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
-    return { success: true, data, source: 'supabase' };
+    if (error) {
+      // Auto-fallback if columns missing in remote Supabase schema cache
+      if (
+        error.code === 'PGRST204' ||
+        (error.message || '').includes('column') ||
+        (error.message || '').includes('schema cache')
+      ) {
+        console.warn('Supabase parts schema missing columns on update. Retrying with basic fields.');
+        const fallbackPayload = {
+          name: cleanName,
+          price: numPrice,
+          quantity: numQty,
+          note: cleanNote,
+          updated_at: new Date().toISOString(),
+        };
+        const { data: fbData, error: fbErr } = await supabase
+          .from('parts')
+          .update(fallbackPayload)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (fbErr) throw fbErr;
+        return {
+          success: true,
+          data: {
+            ...fbData,
+            part_number: fbData?.part_number || null,
+            image_url: fbData?.image_url || null,
+          },
+          isSchemaUpgradeNeeded: true,
+          source: 'supabase',
+        };
+      }
+      throw error;
+    }
+    return {
+      success: true,
+      data: {
+        ...data,
+        part_number: data?.part_number || null,
+        image_url: data?.image_url || null,
+      },
+      source: 'supabase',
+    };
   } catch (err) {
     return { success: false, error: err.message, source: 'supabase' };
   }

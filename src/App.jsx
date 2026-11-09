@@ -119,11 +119,19 @@ export default function App() {
   const handleAddPart = async (partData) => {
     const res = await addPart(partData);
     if (res.success) {
-      showToast(
-        lang === 'ml'
-          ? `"${partData.name}" ക്ലൗഡ് സ്റ്റോക്കിലേക്ക് ചേർത്തു`
-          : `Added "${partData.name}" to Supabase`
-      );
+      if (res.isSchemaUpgradeNeeded) {
+        showToast(
+          lang === 'ml'
+            ? `"${partData.name}" ചേർത്തു! ഫോട്ടോയും പാർട്ട് നമ്പറും സൂക്ഷിക്കാൻ സുപാബേസിൽ SQL റൺ ചെയ്യുക.`
+            : `Added "${partData.name}"! Run SQL upgrade in Supabase to save photos & part numbers.`
+        );
+      } else {
+        showToast(
+          lang === 'ml'
+            ? `"${partData.name}" ക്ലൗഡ് സ്റ്റോക്കിലേക്ക് ചേർത്തു`
+            : `Added "${partData.name}" to Supabase`
+        );
+      }
       await loadData();
     } else {
       if (res.isTableMissing) setIsTableMissing(true);
@@ -134,11 +142,19 @@ export default function App() {
   const handleUpdatePart = async (id, partData) => {
     const res = await updatePart(id, partData);
     if (res.success) {
-      showToast(
-        lang === 'ml'
-          ? `"${partData.name}" വിവരങ്ങൾ മാറ്റി`
-          : `Updated "${partData.name}"`
-      );
+      if (res.isSchemaUpgradeNeeded) {
+        showToast(
+          lang === 'ml'
+            ? `"${partData.name}" മാറ്റി! ഫോട്ടോയും പാർട്ട് നമ്പറും സൂക്ഷിക്കാൻ സുപാബേസിൽ SQL റൺ ചെയ്യുക.`
+            : `Updated "${partData.name}"! Run SQL upgrade in Supabase to save photos & part numbers.`
+        );
+      } else {
+        showToast(
+          lang === 'ml'
+            ? `"${partData.name}" വിവരങ്ങൾ മാറ്റി`
+            : `Updated "${partData.name}"`
+        );
+      }
       await loadData();
     } else {
       showToast(res.error || (lang === 'ml' ? 'മാറ്റം വരുത്താൻ കഴിഞ്ഞില്ല' : 'Failed to update part'), 'error');
