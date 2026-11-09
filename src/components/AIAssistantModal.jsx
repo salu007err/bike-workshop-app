@@ -6,6 +6,7 @@ import {
   Database,
   Trash2,
   HelpCircle,
+  Sparkles,
 } from 'lucide-react';
 import { queryAIAssistant, getStoredGeminiKey } from '../services/aiAgent';
 
@@ -121,23 +122,22 @@ export default function AIAssistantModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
-      <div className="bg-white w-full sm:max-w-xl sm:rounded-3xl rounded-t-3xl shadow-2xl border border-slate-200 flex flex-col h-[85vh] sm:h-[650px] overflow-hidden animate-in slide-in-from-bottom duration-200">
+      <div className="bg-white w-full sm:max-w-xl sm:rounded-3xl rounded-t-3xl shadow-2xl border border-slate-200 flex flex-col h-[88vh] sm:h-[620px] overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         {/* Top Header */}
-        <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg">
-              <Bot className="w-6 h-6 text-white" />
+        <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between border-b border-slate-800 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-md">
+              <Bot className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base text-white">{t.aiAgent.title}</h3>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-extrabold text-sm sm:text-base text-white">{t.aiAgent.title}</h3>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-1.5 py-0.2 rounded-full">
                   100% Free
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium line-clamp-1">
-                {t.aiAgent.subtitle}
+              <p className="text-[10px] text-slate-400 font-medium">
+                {parts.length} {t.aiAgent.partsCount} • {invoices.length} {t.aiAgent.invoicesCount}
               </p>
             </div>
           </div>
@@ -145,52 +145,38 @@ export default function AIAssistantModal({
           <div className="flex items-center gap-1">
             <button
               onClick={handleClearChat}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
               title="Clear chat"
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Live Data Badge Strip */}
-        <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between text-xs text-slate-600">
-          <div className="flex items-center gap-1.5 font-bold text-slate-700">
-            <Database className="w-3.5 h-3.5 text-blue-600" />
-            <span>{t.aiAgent.liveDataConnected}:</span>
-            <span className="text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200 font-extrabold">
-              {parts.length} {t.aiAgent.partsCount} • {invoices.length} {t.aiAgent.invoicesCount}
-            </span>
-          </div>
-
-          <div className="text-[11px] text-slate-500 hidden sm:inline">
-            {hasGeminiKey ? 'Gemini 1.5 Flash Connected' : 'Built-in Workshop AI'}
-          </div>
-        </div>
-
         {/* Chat Messages Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 bg-slate-50/70">
           {messages.map((msg) => {
             const isBot = msg.sender === 'bot';
             return (
               <div
                 key={msg.id}
-                className={`flex gap-2.5 ${isBot ? 'justify-start' : 'justify-end'}`}
+                className={`flex gap-2 ${isBot ? 'justify-start' : 'justify-end'}`}
               >
                 {isBot && (
-                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
-                    <Bot className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5 shadow-xs">
+                    <Bot className="w-3.5 h-3.5" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed shadow-sm whitespace-pre-wrap ${
+                  className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm font-medium leading-relaxed shadow-xs whitespace-pre-wrap ${
                     isBot
                       ? 'bg-white text-slate-800 border border-slate-200'
                       : 'bg-blue-600 text-white'
@@ -198,7 +184,7 @@ export default function AIAssistantModal({
                 >
                   <div>{msg.text}</div>
                   <div
-                    className={`text-[10px] mt-1.5 text-right font-medium ${
+                    className={`text-[9px] mt-1 text-right font-medium ${
                       isBot ? 'text-slate-400' : 'text-blue-200'
                     }`}
                   >
@@ -210,8 +196,8 @@ export default function AIAssistantModal({
           })}
 
           {isLoading && (
-            <div className="flex gap-2.5 items-center text-slate-500 text-xs font-semibold p-2 bg-white rounded-2xl border border-slate-200 w-fit">
-              <Bot className="w-4 h-4 animate-bounce text-blue-600" />
+            <div className="flex gap-2 items-center text-slate-500 text-xs font-semibold p-2 bg-white rounded-xl border border-slate-200 w-fit">
+              <Bot className="w-3.5 h-3.5 animate-bounce text-blue-600" />
               <span>
                 {lang === 'ml' ? 'AI ആലോചിക്കുന്നു...' : 'AI is thinking...'}
               </span>
@@ -221,24 +207,19 @@ export default function AIAssistantModal({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Suggested Quick Questions */}
-        <div className="p-2.5 bg-white border-t border-slate-200 overflow-x-auto whitespace-nowrap">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold text-slate-400 px-1">
-              <HelpCircle className="w-3.5 h-3.5 inline mr-1" />
-            </span>
-            {t.aiAgent.suggestedQuestions.map((q, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleSend(q)}
-                disabled={isLoading}
-                className="text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 transition-colors cursor-pointer"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
+        {/* Quick Suggested Questions (Horizontal Scroll) */}
+        <div className="px-3 py-2 bg-white border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
+          {t.aiAgent.suggestedQuestions.map((q, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleSend(q)}
+              disabled={isLoading}
+              className="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 whitespace-nowrap transition-colors cursor-pointer flex-shrink-0"
+            >
+              {q}
+            </button>
+          ))}
         </div>
 
         {/* Input Bar */}
@@ -247,23 +228,22 @@ export default function AIAssistantModal({
             e.preventDefault();
             handleSend();
           }}
-          className="p-3 bg-white border-t border-slate-200 flex items-center gap-2"
+          className="p-2.5 bg-white border-t border-slate-200 flex items-center gap-1.5 safe-pb flex-shrink-0"
         >
           <input
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
             placeholder={t.aiAgent.placeholder}
-            className="flex-1 text-sm font-semibold px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-none"
-            autoFocus
+            className="flex-1 text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!inputQuery.trim() || isLoading}
-            className="p-3 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
+            className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex-shrink-0"
             aria-label="Send"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-4 h-4" />
           </button>
         </form>
       </div>

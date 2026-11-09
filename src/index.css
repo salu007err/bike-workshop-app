@@ -3,13 +3,37 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-slate-50 text-slate-800 antialiased font-sans select-none min-h-screen;
+    @apply bg-slate-100 text-slate-800 antialiased font-sans select-none min-h-screen;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   input, textarea, select {
     @apply select-text;
+    /* Ensure font size is at least 16px to prevent iOS auto-zoom on input focus */
+    font-size: 16px;
   }
+}
+
+/* Hide scrollbars for clean horizontal scrolling chips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area insets for mobile edge-to-edge screens */
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.safe-mb {
+  margin-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 /* Custom Print Rules for Direct Browser Printing */

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2 } from 'lucide-react';
+import { X, Save, Trash2, Package } from 'lucide-react';
 
-export default function PartModal({ isOpen, onClose, onSave, editingPart, onDelete, t }) {
+export default function PartModal({ isOpen, onClose, onSave, editingPart, onDelete, t, lang }) {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -51,31 +51,35 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-          <h3 className="text-xl font-bold tracking-tight">
-            {editingPart ? t.partModal.editTitle : t.partModal.addTitle}
-          </h3>
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="bg-slate-900 text-white px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-blue-400" />
+            <h3 className="text-base sm:text-lg font-black tracking-tight">
+              {editingPart ? t.partModal.editTitle : t.partModal.addTitle}
+            </h3>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
+            className="p-1 rounded-xl text-slate-400 hover:text-white"
             aria-label="Close"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm font-semibold rounded-xl">
+            <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl">
               {error}
             </div>
           )}
 
           {/* Part Name */}
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
               {t.partModal.nameLabel} <span className="text-red-500">*</span>
             </label>
             <input
@@ -84,54 +88,56 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t.partModal.namePlaceholder}
-              className="w-full text-lg px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
+              className="w-full text-base px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-bold text-slate-900"
               autoFocus
             />
           </div>
 
           {/* Price & Quantity Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 {t.partModal.priceLabel} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
                   ₹
                 </span>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="any"
                   min="0"
                   required
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full text-lg pl-9 pr-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-semibold text-slate-800"
+                  placeholder="0"
+                  className="w-full text-base font-black pl-7 pr-3 py-2.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none text-slate-900"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 {t.partModal.qtyLabel} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
+                inputMode="numeric"
                 min="0"
                 step="1"
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder={t.partModal.qtyPlaceholder}
-                className="w-full text-lg px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-semibold text-slate-800"
+                placeholder="0"
+                className="w-full text-base font-black px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none text-slate-900"
               />
             </div>
           </div>
 
           {/* Optional Note */}
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
               {t.partModal.noteLabel}
             </label>
             <input
@@ -139,20 +145,21 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder={t.partModal.notePlaceholder}
-              className="w-full text-base px-4 py-2.5 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none"
+              className="w-full text-sm font-semibold px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none text-slate-800"
             />
           </div>
 
           {/* Action buttons */}
-          <div className="pt-4 flex items-center justify-between gap-3 border-t border-slate-100">
+          <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
             {editingPart && onDelete ? (
               <button
                 type="button"
                 onClick={() => onDelete(editingPart.id)}
-                className="px-4 py-3 rounded-2xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 font-bold flex items-center gap-2 text-sm"
+                className="p-2.5 rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold flex items-center gap-1"
+                aria-label="Delete"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>{t.partModal.deletePart}</span>
+                <span className="hidden xs:inline">{t.partModal.deletePart}</span>
               </button>
             ) : (
               <div />
@@ -162,15 +169,15 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-sm"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs"
               >
                 {t.partModal.cancel}
               </button>
               <button
                 type="submit"
-                className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base flex items-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition-all"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
               >
-                <Save className="w-5 h-5" />
+                <Save className="w-4 h-4" />
                 <span>{t.partModal.save}</span>
               </button>
             </div>

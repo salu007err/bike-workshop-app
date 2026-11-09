@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import BottomNav from './components/BottomNav';
 import HomeView from './components/HomeView';
 import StockView from './components/StockView';
 import CreateInvoiceView from './components/CreateInvoiceView';
@@ -7,7 +8,6 @@ import InvoiceHistoryView from './components/InvoiceHistoryView';
 import InvoiceDetailModal from './components/InvoiceDetailModal';
 import SettingsModal from './components/SettingsModal';
 import AIAssistantModal from './components/AIAssistantModal';
-import { Bot, Sparkles } from 'lucide-react';
 import {
   fetchParts,
   addPart,
@@ -54,7 +54,7 @@ export default function App() {
   // AI Assistant modal state
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
-  // Data states (Zero Dummy Data - Clean Production Ready)
+  // Data states (Clean Production Ready)
   const [parts, setParts] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [isLoadingParts, setIsLoadingParts] = useState(true);
@@ -110,7 +110,7 @@ export default function App() {
       showToast(
         lang === 'ml'
           ? `"${partData.name}" സ്റ്റോക്കിലേക്ക് ചേർത്തു`
-          : `Added part "${partData.name}"`
+          : `Added "${partData.name}" to stock`
       );
       await loadData();
     } else {
@@ -124,7 +124,7 @@ export default function App() {
       showToast(
         lang === 'ml'
           ? `"${partData.name}" വിവരങ്ങൾ മാറ്റി`
-          : `Updated part "${partData.name}"`
+          : `Updated "${partData.name}"`
       );
       await loadData();
     } else {
@@ -170,12 +170,10 @@ export default function App() {
       if (res.success) {
         showToast(
           lang === 'ml'
-            ? `ബിൽ #${res.data.invoice_number} തയ്യാറായി! സ്റ്റോക്ക് കുറച്ചു.`
-            : `Invoice #${res.data.invoice_number} created! Stock updated.`
+            ? `ബിൽ #${res.data.invoice_number} തയ്യാറായി!`
+            : `Invoice #${res.data.invoice_number} created!`
         );
-        // Reload parts and invoices so quantities reflect changes
         await loadData();
-        // Open detail modal with download/print/WhatsApp options
         setActiveInvoice(res.data);
         return true;
       } else {
@@ -197,10 +195,9 @@ export default function App() {
       showToast(
         lang === 'ml'
           ? 'ബിൽ റദ്ദാക്കി! പാർട്സുകൾ തിരികെ സ്റ്റോക്കിലേക്ക് ചേർത്തു.'
-          : 'Invoice cancelled! Deducted stock has been restored.'
+          : 'Invoice cancelled! Stock restored.'
       );
       await loadData();
-      // Update active invoice status in modal
       if (activeInvoice && activeInvoice.id === invoiceId) {
         setActiveInvoice((prev) => ({ ...prev, invoice_status: 'cancelled' }));
       }
@@ -215,8 +212,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans text-slate-800">
-      {/* Navbar */}
+    <div className="min-h-screen bg-slate-100 flex flex-col justify-between font-sans text-slate-800">
+      {/* 1. TOP HEADER / APP BAR */}
       <Navbar
         workshopConfig={workshopConfig}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -227,11 +224,11 @@ export default function App() {
         t={t}
       />
 
-      {/* Global Toast Alert */}
+      {/* 2. GLOBAL FLOATING TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed top-18 right-4 z-50 max-w-sm animate-in slide-in-from-top-5 duration-200 no-print">
+        <div className="fixed top-16 right-3 left-3 sm:left-auto sm:right-4 z-50 sm:max-w-sm animate-in slide-in-from-top-4 duration-200 no-print">
           <div
-            className={`px-4 py-3 rounded-2xl shadow-xl font-bold text-sm border flex items-center gap-2 ${
+            className={`px-4 py-3 rounded-2xl shadow-xl font-bold text-xs sm:text-sm border flex items-center gap-2 ${
               toastMessage.type === 'error'
                 ? 'bg-red-600 text-white border-red-700'
                 : 'bg-slate-900 text-emerald-400 border-slate-800'
@@ -242,12 +239,16 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 pb-20">
+      {/* 3. MAIN CONTENT (SAFE BOTTOM PADDING FOR BOTTOM NAV) */}
+      <main className="flex-1 pb-24 sm:pb-20">
         {currentSection === 'home' && (
           <HomeView
             onSelectSection={(sec) => setCurrentSection(sec)}
+            parts={parts}
+            invoices={invoices}
+            onSelectInvoice={(inv) => setActiveInvoice(inv)}
             t={t}
+            lang={lang}
           />
         )}
 
@@ -261,6 +262,7 @@ export default function App() {
             onDeletePart={handleDeletePart}
             onAddStock={handleAddStock}
             t={t}
+            lang={lang}
           />
         )}
 
@@ -272,6 +274,7 @@ export default function App() {
             onViewHistory={() => setCurrentSection('history')}
             isCreating={isCreatingInvoice}
             t={t}
+            lang={lang}
           />
         )}
 
@@ -283,34 +286,23 @@ export default function App() {
             onSelectInvoice={(inv) => setActiveInvoice(inv)}
             onCancelInvoice={handleCancelInvoice}
             t={t}
+            lang={lang}
           />
         )}
       </main>
 
-      {/* Floating Free AI Assistant Button */}
-      <button
-        onClick={() => setIsAIAssistantOpen(true)}
-        className="fixed bottom-5 right-5 z-40 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-sm px-4 py-3 rounded-2xl shadow-xl shadow-blue-500/30 flex items-center gap-2 active:scale-95 transition-all no-print cursor-pointer border border-blue-400/40"
-        title={t.aiAgent.floatingBtn}
-      >
-        <Bot className="w-5 h-5 text-white animate-pulse" />
-        <span className="tracking-wide">{t.aiAgent.floatingBtn}</span>
-        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-      </button>
+      {/* 4. MODERN MOBILE BOTTOM NAVIGATION BAR (INSTANT 1-TAP ACCESS) */}
+      <BottomNav
+        currentSection={currentSection}
+        onSelectSection={(sec) => setCurrentSection(sec)}
+        onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
+        partsCount={parts.length}
+        invoicesCount={invoices.length}
+        t={t}
+        lang={lang}
+      />
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-400 no-print">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>{workshopConfig.workshopName || 'BIKE WORKSHOP'}</span>
-          <span className="text-slate-500 font-semibold">
-            {lang === 'ml'
-              ? '100% സൗജന്യം • സബ്‌സ്‌ക്രിപ്ഷൻ ഇല്ല • ₹0 ചിലവ്'
-              : '100% Free • No Subscription • ₹0 Cost'}
-          </span>
-        </div>
-      </footer>
-
-      {/* Free AI Assistant Modal */}
+      {/* 5. FREE AI ASSISTANT MODAL (WHATSAPP-STYLE BOTTOM SHEET) */}
       <AIAssistantModal
         isOpen={isAIAssistantOpen}
         onClose={() => setIsAIAssistantOpen(false)}
@@ -320,7 +312,7 @@ export default function App() {
         t={t}
       />
 
-      {/* Invoice Detail / Actions Modal (Download PDF, Print, WhatsApp) */}
+      {/* 6. INVOICE DETAIL & SHARING MODAL (ONE-TAP WHATSAPP & PDF) */}
       <InvoiceDetailModal
         isOpen={!!activeInvoice}
         onClose={() => setActiveInvoice(null)}
@@ -335,7 +327,7 @@ export default function App() {
         t={t}
       />
 
-      {/* Settings Modal */}
+      {/* 7. SETTINGS MODAL */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
