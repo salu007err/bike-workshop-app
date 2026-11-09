@@ -29,20 +29,6 @@ export function getStoredGeminiKey() {
     return { key: AI_CONFIG.GEMINI_API_KEY.trim(), source: 'config' };
   }
 
-  // 2. Check environment variables (.env or Cloudflare Pages)
-  const envKey =
-    typeof import.meta !== 'undefined' && import.meta.env
-      ? import.meta.env.VITE_GEMINI_API_KEY
-      : undefined;
-  if (
-    envKey &&
-    envKey.trim() !== '' &&
-    envKey !== 'YOUR_GEMINI_KEY' &&
-    !envKey.includes('your-gemini')
-  ) {
-    return { key: envKey.trim(), source: 'env' };
-  }
-
   return null;
 }
 
