@@ -379,8 +379,6 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         workshopConfig={workshopConfig}
         onSaveWorkshopConfig={handleSaveWorkshopConfig}
-        isSupabaseConnected={isSupabaseConnected}
-        onRefreshData={loadData}
         lang={lang}
         onSelectLanguage={handleSelectLanguage}
         t={t}

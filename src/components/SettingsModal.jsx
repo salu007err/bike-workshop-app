@@ -2,21 +2,16 @@ import React, { useState } from 'react';
 import {
   X,
   Store,
-  Database,
   Save,
   CheckCircle,
   Globe,
-  ExternalLink,
 } from 'lucide-react';
-import { clearAllLocalData } from '../services/db';
 
 export default function SettingsModal({
   isOpen,
   onClose,
   workshopConfig,
   onSaveWorkshopConfig,
-  isSupabaseConnected,
-  onRefreshData,
   lang,
   onSelectLanguage,
   t,
@@ -122,37 +117,6 @@ export default function SettingsModal({
               <span>{t.settings.saveShopName}</span>
             </button>
           </form>
-
-          {/* 3. PURE SUPABASE CLOUD STATUS */}
-          <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-emerald-600" />
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-slate-400">Database</div>
-                  <div className="text-xs font-black text-slate-800">Supabase Cloud PostgreSQL</div>
-                </div>
-              </div>
-
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-emerald-100 text-emerald-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                100% Cloud Only
-              </span>
-            </div>
-
-            <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500 font-medium">Project: peqiwojcxtklbbvfctxt</span>
-              <a
-                href="https://supabase.com/dashboard/project/peqiwojcxtklbbvfctxt"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1"
-              >
-                <span>Dashboard</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
