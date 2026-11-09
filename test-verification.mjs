@@ -23,6 +23,7 @@ const invService = await import('./src/services/invoiceService.js');
 const trans = await import('./src/services/translations.js');
 const aiAgent = await import('./src/services/aiAgent.js');
 const searchUtils = await import('./src/services/searchUtils.js');
+const commonParts = await import('./src/services/commonBikeParts.js');
 
 // Setup Pure Supabase Mock for automated test environment
 const mockPartsTable = [];
@@ -401,6 +402,31 @@ assert(partNumberSearch.length > 0 && partNumberSearch[0].part_number === '24101
 assert(searchUtils.levenshteinDistance('engine', 'engne') === 1, 'Levenshtein distance "engine" vs "engne" is 1');
 assert(searchUtils.levenshteinDistance('castrol', 'castol') === 1, 'Levenshtein distance "castrol" vs "castol" is 1');
 assert(searchUtils.levenshteinDistance('brake', 'brak') === 1, 'Levenshtein distance "brake" vs "brak" is 1');
+
+// 15. Global Bike & Scooter Parts Catalog Autocomplete Verification
+console.log('\nTest Suite 14: Global Bike & Scooter Parts Catalog Autocomplete');
+assert(commonParts.COMMON_BIKE_PARTS.length >= 80, `Extensive catalog contains ${commonParts.COMMON_BIKE_PARTS.length} common bike and scooter parts`);
+
+// Autocomplete search for scooter drive belt
+const beltResults = commonParts.searchCommonBikeParts('belt', 5);
+assert(beltResults.length > 0 && beltResults.some(p => p.name.includes('Belt')), 'Autocomplete "belt" returns Scooter CVT Drive Belt');
+
+// Autocomplete search for brake pads
+const brakeResults = commonParts.searchCommonBikeParts('brake pad', 5);
+assert(brakeResults.length > 0 && brakeResults.some(p => p.name.includes('Brake Pad')), 'Autocomplete "brake pad" returns Disc Brake Pad');
+
+// Autocomplete search for spark plug
+const sparkResults = commonParts.searchCommonBikeParts('spark', 5);
+assert(sparkResults.length > 0 && sparkResults.some(p => p.name.includes('Spark Plug')), 'Autocomplete "spark" returns Spark Plug');
+
+// Autocomplete search for scooter variator rollers
+const rollerResults = commonParts.searchCommonBikeParts('roller', 5);
+assert(rollerResults.length > 0 && rollerResults.some(p => p.name.includes('Roller')), 'Autocomplete "roller" returns Variator Roller Weights');
+
+// Autocomplete search with Malayalam query
+const mlResults = commonParts.searchCommonBikeParts('ക്ലച്ച്', 5);
+assert(mlResults.length > 0 && mlResults.some(p => p.name.toLowerCase().includes('clutch')), 'Malayalam autocomplete search "ക്ലച്ച്" returns Clutch Plate Set');
+
 
 
 console.log('\n=======================================');

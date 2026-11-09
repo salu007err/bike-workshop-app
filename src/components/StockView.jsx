@@ -312,15 +312,16 @@ export default function StockView({
                       )}
                     </span>
 
-                    {/* View Image Icon Button if part has image */}
+                    {/* View Image Button if part has image */}
                     {part.image_url && (
                       <button
                         type="button"
                         onClick={() => setViewImagePart(part)}
-                        className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200/80 text-[11px] font-black cursor-pointer transition-all"
                         title={lang === 'ml' ? 'ഫോട്ടോ കാണുക' : 'View photo'}
                       >
-                        <ImageIcon className="w-3.5 h-3.5" />
+                        <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{t.stock.viewImage || 'View Photo'}</span>
                       </button>
                     )}
                   </div>

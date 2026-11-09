@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Trash2, Package, Camera, Image as ImageIcon, Loader2, Hash } from 'lucide-react';
+import {
+  X,
+  Save,
+  Trash2,
+  Package,
+  Camera,
+  Image as ImageIcon,
+  Loader2,
+  Hash,
+  Plus,
+  Eye,
+  ZoomIn,
+  Check,
+  Sparkles,
+} from 'lucide-react';
+import { searchCommonBikeParts } from '../services/commonBikeParts';
 
 /**
  * Compresses an image file client-side using HTML5 Canvas.
@@ -58,7 +73,17 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Autocomplete state
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+
+  // Full-size image preview state
+  const [isPreviewImageOpen, setIsPreviewImageOpen] = useState(false);
+
   const fileInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const priceInputRef = useRef(null);
+  const autocompleteRef = useRef(null);
 
   useEffect(() => {
     if (editingPart) {
@@ -78,9 +103,55 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
     }
     setError('');
     setIsSaving(false);
+    setShowSuggestions(false);
+    setIsPreviewImageOpen(false);
   }, [editingPart, isOpen]);
 
+  // Update autocomplete suggestions as user types in Part Name
+  useEffect(() => {
+    if (name.trim().length > 0) {
+      const results = searchCommonBikeParts(name, 10);
+      setSuggestions(results);
+    } else {
+      // Default top suggestions when empty
+      setSuggestions(searchCommonBikeParts('', 8));
+    }
+  }, [name]);
+
+  // Close autocomplete on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
   if (!isOpen) return null;
+
+  const handleSelectSuggestion = (suggestedPart) => {
+    setName(suggestedPart.name);
+    setShowSuggestions(false);
+    // Focus price input next for seamless flow
+    setTimeout(() => {
+      priceInputRef.current?.focus();
+    }, 50);
+  };
+
+  const handleConfirmCustomPart = () => {
+    if (name.trim()) {
+      setShowSuggestions(false);
+      setTimeout(() => {
+        priceInputRef.current?.focus();
+      }, 50);
+    }
+  };
 
   const handlePhotoSelect = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -96,7 +167,6 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
       setError(lang === 'ml' ? 'ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല' : 'Failed to process selected image');
     } finally {
       setIsProcessingImage(false);
-      // Reset input value so same file can be selected again if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -139,9 +209,13 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
     }
   };
 
+  const hasExactMatch = suggestions.some(
+    (s) => s.name.toLowerCase() === name.trim().toLowerCase()
+  );
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="bg-slate-900 text-white px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -167,21 +241,95 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
             </div>
           )}
 
-          {/* Part Name */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-              {t.partModal.nameLabel} <span className="text-red-500">*</span>
+          {/* Part Name with Autocomplete & Plus Icon */}
+          <div className="relative" ref={autocompleteRef}>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 flex items-center justify-between">
+              <span>
+                {t.partModal.nameLabel} <span className="text-red-500">*</span>
+              </span>
+              <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>{lang === 'ml' ? 'ഓട്ടോകംപ്ലീറ്റ് ലഭ്യമാണ്' : 'Auto-suggest active'}</span>
+              </span>
             </label>
-            <input
-              type="text"
-              required
-              disabled={isSaving}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t.partModal.namePlaceholder}
-              className="w-full text-base px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-bold text-slate-900 disabled:bg-slate-100"
-              autoFocus
-            />
+
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  required
+                  disabled={isSaving}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder={t.partModal.namePlaceholder || 'Type or pick part (e.g. Engine Oil, Brake Shoe)'}
+                  className="w-full text-sm sm:text-base px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none font-bold text-slate-900 disabled:bg-slate-100 placeholder:font-normal placeholder:text-xs sm:placeholder:text-sm"
+                  autoFocus
+                  autoComplete="off"
+                />
+              </div>
+
+              {/* Plus Button to add/confirm part */}
+              <button
+                type="button"
+                onClick={handleConfirmCustomPart}
+                disabled={isSaving || !name.trim()}
+                className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-40 text-white font-black transition-all shadow-xs flex-shrink-0 cursor-pointer"
+                title={lang === 'ml' ? 'ഈ പേര് ഉറപ്പിക്കുക / ചേർക്കുക' : 'Confirm / Add this part name'}
+              >
+                <Plus className="w-5 h-5 stroke-[2.5]" />
+              </button>
+            </div>
+
+            {/* Autocomplete Dropdown */}
+            {showSuggestions && (
+              <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-white rounded-2xl shadow-xl border-2 border-blue-500/30 overflow-hidden max-h-56 overflow-y-auto animate-in fade-in duration-100 divide-y divide-slate-100">
+                {/* Option to add custom typed name if not matching */}
+                {name.trim() && !hasExactMatch && (
+                  <button
+                    type="button"
+                    onClick={handleConfirmCustomPart}
+                    className="w-full text-left p-2.5 bg-blue-50/70 hover:bg-blue-100 text-blue-900 font-extrabold text-xs flex items-center justify-between transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Plus className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">
+                        {t.partModal.addCustomPart || 'Add as custom part'}: <strong>"{name.trim()}"</strong>
+                      </span>
+                    </span>
+                    <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-bold flex-shrink-0">
+                      {lang === 'ml' ? 'പുതിയത്' : 'Custom'}
+                    </span>
+                  </button>
+                )}
+
+                {/* Suggested Parts */}
+                {suggestions.map((partItem, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(partItem)}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-2 transition-colors cursor-pointer group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs sm:text-sm font-extrabold text-slate-800 group-hover:text-blue-600 truncate">
+                        {partItem.name}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-medium truncate">
+                        {partItem.category} {partItem.ml ? `• ${partItem.ml}` : ''}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 bg-slate-100 group-hover:bg-blue-50 px-2 py-0.5 rounded flex-shrink-0">
+                      + Select
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Part Number (Nullable / Optional) */}
@@ -211,6 +359,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
                   ₹
                 </span>
                 <input
+                  ref={priceInputRef}
                   type="number"
                   inputMode="decimal"
                   step="any"
@@ -244,7 +393,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
             </div>
           </div>
 
-          {/* Part Photo / Image (Nullable / Optional) */}
+          {/* Part Photo / Image Upload & View Section */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
               <span className="flex items-center gap-1">
@@ -256,33 +405,61 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
                   type="button"
                   onClick={() => setImageUrl('')}
                   disabled={isSaving}
-                  className="text-[11px] text-red-500 hover:text-red-700 font-bold"
+                  className="text-[11px] text-red-500 hover:text-red-700 font-bold cursor-pointer"
                 >
                   {t.partModal.removePhoto || 'Remove Photo'}
                 </button>
               )}
             </label>
 
-            {/* Photo preview or upload buttons */}
+            {/* Photo attached preview card with VIEW FULL PHOTO option */}
             {imageUrl ? (
-              <div className="flex items-center gap-3 p-2 bg-slate-50 border-2 border-slate-200 rounded-xl">
-                <img
-                  src={imageUrl}
-                  alt="Part preview"
-                  className="w-14 h-14 object-cover rounded-lg border border-slate-300 flex-shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-emerald-700 truncate">
-                    ✓ {lang === 'ml' ? 'ഫോട്ടോ ചേർത്തു' : 'Photo attached'}
-                  </div>
+              <div className="p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center gap-3">
+                  {/* Clickable thumbnail to view full image */}
                   <button
                     type="button"
-                    disabled={isSaving}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-xs text-blue-600 hover:underline font-bold mt-0.5 block"
+                    onClick={() => setIsPreviewImageOpen(true)}
+                    className="relative w-14 h-14 rounded-lg overflow-hidden border border-slate-300 flex-shrink-0 group cursor-pointer"
+                    title={lang === 'ml' ? 'ഫോട്ടോ വലുതായി കാണുക' : 'Click to view full photo'}
                   >
-                    {t.partModal.changePhoto || 'Change Photo'}
+                    <img
+                      src={imageUrl}
+                      alt="Part preview"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ZoomIn className="w-4 h-4 text-white" />
+                    </div>
                   </button>
+
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="text-xs font-bold text-emerald-700 flex items-center gap-1 truncate">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{lang === 'ml' ? 'ഫോട്ടോ ചേർത്തു' : 'Photo attached'}</span>
+                    </div>
+
+                    {/* Prominent VIEW FULL PHOTO Button */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsPreviewImageOpen(true)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs transition-all cursor-pointer shadow-xs"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>{t.partModal.viewPhoto || 'View Photo'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isSaving}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-xs text-slate-600 hover:text-slate-900 font-bold hover:underline"
+                      >
+                        {t.partModal.changePhoto || 'Change'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -318,15 +495,27 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
               className="hidden"
             />
 
-            {/* Or URL Input */}
-            <input
-              type="url"
-              disabled={isSaving}
-              value={imageUrl.startsWith('data:') ? '' : imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder={t.partModal.imageUrlPlaceholder || 'Or paste image link (http://...)'}
-              className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none text-slate-700 placeholder:text-slate-400"
-            />
+            {/* Image URL Input */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="url"
+                disabled={isSaving}
+                value={imageUrl.startsWith('data:') ? '' : imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder={t.partModal.imageUrlPlaceholder || 'Or paste image link (http://...)'}
+                className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none text-slate-700 placeholder:text-slate-400"
+              />
+              {imageUrl && !imageUrl.startsWith('data:') && (
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewImageOpen(true)}
+                  className="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                  title={t.partModal.viewPhoto || 'View Photo'}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Optional Note */}
@@ -351,7 +540,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
                 type="button"
                 disabled={isSaving}
                 onClick={() => onDelete(editingPart.id)}
-                className="p-2.5 rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold flex items-center gap-1 disabled:opacity-40"
+                className="p-2.5 rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold flex items-center gap-1 disabled:opacity-40 cursor-pointer"
                 aria-label="Delete"
               >
                 <Trash2 className="w-4 h-4" />
@@ -366,7 +555,7 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
                 type="button"
                 disabled={isSaving}
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs disabled:opacity-40"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs disabled:opacity-40 cursor-pointer"
               >
                 {t.partModal.cancel}
               </button>
@@ -391,6 +580,53 @@ export default function PartModal({ isOpen, onClose, onSave, editingPart, onDele
           </div>
         </form>
       </div>
+
+      {/* Full-Size Uploaded Image Preview Modal */}
+      {isPreviewImageOpen && imageUrl && (
+        <div
+          className="fixed inset-0 z-60 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 animate-in fade-in duration-150"
+          onClick={() => setIsPreviewImageOpen(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl relative animate-in zoom-in-95 text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <ImageIcon className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                <h4 className="text-sm font-black truncate">
+                  {name || (lang === 'ml' ? 'ഫോട്ടോ പ്രിവ്യൂ' : 'Part Photo Preview')}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPreviewImageOpen(false)}
+                className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-950 flex items-center justify-center min-h-[260px] max-h-[65vh]">
+              <img
+                src={imageUrl}
+                alt="Enlarged part view"
+                className="max-h-[60vh] w-auto max-w-full rounded-2xl object-contain mx-auto shadow-md"
+              />
+            </div>
+
+            <div className="p-3 bg-slate-900 border-t border-slate-800 text-right">
+              <button
+                type="button"
+                onClick={() => setIsPreviewImageOpen(false)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer"
+              >
+                {lang === 'ml' ? 'ശരി' : 'Close Preview'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
