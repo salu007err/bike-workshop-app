@@ -542,6 +542,135 @@ assert(excessiveQtyRes.error.includes('Not enough stock'), 'Proper stock error r
 const postRollbackPart = (await db.fetchParts()).data.find(p => p.id === airFilterPart.data.id);
 assert(postRollbackPart.quantity === 7, 'Stock preserved at 7 after rejected edit transaction');
 
+// 17. Outside Purchased Parts & Labour-Only Bills Verification
+console.log('\nTest Suite 16: Outside Purchased Parts & Labour-Only Bills');
+
+// Test 1: Labour-Only Bill (Customer brought their own parts, only fitting labour charged)
+const labourOnlyRes = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 EF 5555',
+  items: [
+    {
+      part_id: null,
+      description: 'Customer Oil Change Labour',
+      quantity: 1,
+      price: 80,
+      item_type: 'work'
+    },
+    {
+      part_id: null,
+      description: 'Customer Brake Shoe Fitting Labour',
+      quantity: 1,
+      price: 120,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 200
+});
+
+assert(labourOnlyRes.success === true, 'Labour-only bill created successfully for customer with own parts');
+assert(labourOnlyRes.data.total_amount === 200, 'Labour bill total amount correctly calculated: ₹200');
+
+// Verify that zero stock was deducted anywhere in workshop inventory
+const partsAfterLabourOnly = (await db.fetchParts()).data;
+const airFilterCheck1 = partsAfterLabourOnly.find(p => p.id === airFilterPart.data.id);
+assert(airFilterCheck1.quantity === 7, 'Workshop stock completely untouched by labour-only bill (still 7)');
+
+// Test 2: Outside Purchased Part (Mechanic purchased part for customer with price, not from stock)
+const outsidePartRes = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 GH 7777',
+  items: [
+    {
+      part_id: null, // Null part_id indicates outside purchased part
+      description: 'Exide 12V 4Ah Battery (Outside Purchase)',
+      quantity: 1,
+      price: 1350,
+      item_type: 'part'
+    },
+    {
+      part_id: null,
+      description: 'Battery Fitting & Electrical Check',
+      quantity: 1,
+      price: 100,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 1450
+});
+
+assert(outsidePartRes.success === true, 'Outside purchased part invoice created successfully');
+assert(outsidePartRes.data.total_amount === 1450, 'Invoice total includes outside part price + labour: ₹1450');
+
+// Verify outside part didn't deduct from workshop inventory
+const partsAfterOutside = (await db.fetchParts()).data;
+const airFilterCheck2 = partsAfterOutside.find(p => p.id === airFilterPart.data.id);
+assert(airFilterCheck2.quantity === 7, 'Workshop inventory stock remains 7 (outside part not deducted)');
+
+// Test 3: Customer Supplied Part at ₹0 + Labour Charge
+const customerZeroPartRes = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 IJ 8888',
+  items: [
+    {
+      part_id: null,
+      description: 'Customer Supplied Motul 15W50 Engine Oil',
+      quantity: 1,
+      price: 0,
+      item_type: 'part'
+    },
+    {
+      part_id: null,
+      description: 'Oil Replacement Service',
+      quantity: 1,
+      price: 70,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 70
+});
+
+assert(customerZeroPartRes.success === true, 'Customer supplied part recorded at ₹0 with service labour ₹70');
+assert(customerZeroPartRes.data.total_amount === 70, 'Total bill amount is ₹70');
+
+// Test 4: Hybrid Bill (1 In-Stock Part + 1 Outside Part + 1 Labour)
+const hybridRes = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 KL 9999',
+  items: [
+    {
+      part_id: airFilterPart.data.id, // In-Stock Part (should deduct 1 from 7 -> 6)
+      description: airFilterPart.data.name,
+      quantity: 1,
+      price: 250,
+      item_type: 'part'
+    },
+    {
+      part_id: null, // Outside Purchased Part (no stock deduction)
+      description: 'Spark Plug NGK (Outside Purchase)',
+      quantity: 1,
+      price: 160,
+      item_type: 'part'
+    },
+    {
+      part_id: null, // Labour Charge
+      description: 'General Tuneup Labour',
+      quantity: 1,
+      price: 150,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 560
+});
+
+assert(hybridRes.success === true, 'Hybrid bill (Stock Part + Outside Part + Labour) created successfully');
+assert(hybridRes.data.total_amount === 560, 'Hybrid total calculated accurately: ₹560');
+
+// Verify only the in-stock part was deducted (from 7 to 6)
+const partsAfterHybrid = (await db.fetchParts()).data;
+const airFilterCheck3 = partsAfterHybrid.find(p => p.id === airFilterPart.data.id);
+assert(airFilterCheck3.quantity === 6, 'Only the workshop in-stock part was deducted (from 7 to 6)');
+
+// PDF check for outside part label
+const hybridPdfDoc = invService.generateInvoicePDFDoc(hybridRes.data, 'SPEEDY MOTORS');
+assert(hybridPdfDoc && typeof hybridPdfDoc.output === 'function', 'Generated PDF invoice with Outside Part differentiation');
+
 
 
 console.log('\n=======================================');

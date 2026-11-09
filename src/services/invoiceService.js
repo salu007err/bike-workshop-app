@@ -74,7 +74,9 @@ export function generateInvoicePDFDoc(invoice, workshopName = 'BIKE WORKSHOP') {
 
   // Items Table
   const tableRows = (invoice.items || []).map((item, index) => {
-    const itemType = item.item_type === 'part' ? 'Part' : 'Work / Labor';
+    const itemType = item.item_type === 'part'
+      ? (item.part_id ? 'Part (Stock)' : 'Part (Outside)')
+      : 'Labor / Work';
     const price = parseFloat(item.price) || 0;
     const qty = parseInt(item.quantity, 10) || 1;
     const amount = (price * qty).toFixed(2);

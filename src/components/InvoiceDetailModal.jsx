@@ -229,12 +229,18 @@ export default function InvoiceDetailModal({
                     <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
                       <span
                         className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                          item.item_type === 'part'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-emerald-50 text-emerald-700'
+                          item.item_type === 'part' && item.part_id
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : item.item_type === 'part' && !item.part_id
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         }`}
                       >
-                        {item.item_type === 'part' ? t.createInvoice.itemColPart : t.createInvoice.itemColWork}
+                        {item.item_type === 'part' && item.part_id
+                          ? (t.createInvoice.itemColStockPart || (lang === 'ml' ? 'സ്റ്റോക്ക് പാർട്ട്' : 'Stock Part'))
+                          : item.item_type === 'part' && !item.part_id
+                          ? (t.createInvoice.itemColOutsidePart || (lang === 'ml' ? 'പുറത്തുനിന്ന്' : 'Outside Part'))
+                          : (t.createInvoice.itemColWork || (lang === 'ml' ? 'പണിക്കൂലി' : 'Labour'))}
                       </span>
                       <span>
                         {qty} × ₹{price.toFixed(0)}

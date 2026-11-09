@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   Plus,
@@ -7,6 +7,7 @@ import {
   FileText,
   Wrench,
   Package,
+  ShoppingCart,
   CheckCircle2,
   AlertCircle,
   History,
@@ -16,8 +17,10 @@ import {
   Hash,
   Loader2,
   Edit2,
+  Info,
 } from 'lucide-react';
 import { fuzzyFilter } from '../services/searchUtils';
+import { searchCommonBikeParts } from '../services/commonBikeParts';
 
 export default function CreateInvoiceView({
   parts,
@@ -57,13 +60,21 @@ export default function CreateInvoiceView({
     }
   }, [editingInvoice]);
 
-  // Active Tab for adding: 'part' or 'work'
-  const [itemTypeTab, setItemTypeTab] = useState('part');
+  // Active Tab for adding: 'stock' | 'outside' | 'work'
+  const [itemTypeTab, setItemTypeTab] = useState('stock');
 
-  // Part form state
+  // Stock Part form state
   const [partSearchQuery, setPartSearchQuery] = useState('');
   const [selectedPartId, setSelectedPartId] = useState('');
   const [partQty, setPartQty] = useState(1);
+
+  // Outside / Purchased Part form state
+  const [outsidePartName, setOutsidePartName] = useState('');
+  const [outsidePartPrice, setOutsidePartPrice] = useState('');
+  const [outsidePartQty, setOutsidePartQty] = useState(1);
+  const [outsideSuggestions, setOutsideSuggestions] = useState([]);
+  const [showOutsideSuggestions, setShowOutsideSuggestions] = useState(false);
+  const outsideAutocompleteRef = useRef(null);
 
   // Work form state
   const [workDescription, setWorkDescription] = useState('');
@@ -76,6 +87,30 @@ export default function CreateInvoiceView({
   const searchedParts = partSearchQuery.trim()
     ? fuzzyFilter(parts, partSearchQuery, ['name', 'part_number', 'note'])
     : parts;
+
+  // Autocomplete suggestions for outside part name
+  useEffect(() => {
+    if (outsidePartName.trim()) {
+      setOutsideSuggestions(searchCommonBikeParts(outsidePartName, 8));
+    } else {
+      setOutsideSuggestions(searchCommonBikeParts('', 6));
+    }
+  }, [outsidePartName]);
+
+  // Click outside to close outside part autocomplete dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (outsideAutocompleteRef.current && !outsideAutocompleteRef.current.contains(e.target)) {
+        setShowOutsideSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
   // Compute live total
   const totalAmount = items.reduce((sum, item) => {
@@ -135,6 +170,47 @@ export default function CreateInvoiceView({
     setSelectedPartId('');
     setPartSearchQuery('');
     setPartQty(1);
+    setError('');
+  };
+
+  // Add Outside / Custom Purchased Part to bill (ZERO stock deduction)
+  const handleAddOutsidePart = (e) => {
+    if (e) e.preventDefault();
+    const name = outsidePartName.trim();
+    if (!name) {
+      setError(t.createInvoice.errOutsidePartName || 'Please enter the outside part name.');
+      return;
+    }
+
+    const price = parseFloat(outsidePartPrice);
+    if (isNaN(price) || price < 0) {
+      setError(t.createInvoice.errOutsidePartPrice || 'Please enter a valid price (₹0 or greater).');
+      return;
+    }
+
+    const qty = parseInt(outsidePartQty, 10);
+    if (isNaN(qty) || qty <= 0) {
+      setError(t.createInvoice.errPartQty || 'Please enter a valid quantity of 1 or more.');
+      return;
+    }
+
+    setItems((prev) => [
+      ...prev,
+      {
+        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        part_id: null, // Null part_id ensures zero workshop stock inventory deduction
+        description: name,
+        quantity: qty,
+        price: price,
+        item_type: 'part',
+        is_outside: true,
+      },
+    ]);
+
+    setOutsidePartName('');
+    setOutsidePartPrice('');
+    setOutsidePartQty(1);
+    setShowOutsideSuggestions(false);
     setError('');
   };
 
@@ -251,7 +327,9 @@ export default function CreateInvoiceView({
     }
   };
 
-  const partItemsCount = items.filter((it) => it.item_type === 'part').length;
+  const stockItemsCount = items.filter((it) => it.item_type === 'part' && it.part_id).length;
+  const outsideItemsCount = items.filter((it) => it.item_type === 'part' && !it.part_id).length;
+  const workItemsCount = items.filter((it) => it.item_type === 'work').length;
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-3 sm:space-y-4 pb-36">
@@ -353,39 +431,52 @@ export default function CreateInvoiceView({
         </div>
       </div>
 
-      {/* 3. STEP 2: ADD ITEMS (TABBED PICKER) */}
+      {/* 3. STEP 2: ADD ITEMS (TABBED PICKER: STOCK vs OUTSIDE PART vs LABOUR) */}
       <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
-        {/* Sub-tabs: Spare Part vs Work */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+        {/* Sub-tabs: Workshop Stock vs Outside Purchased Part vs Labour */}
+        <div className="grid grid-cols-3 gap-1 sm:gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
           <button
             type="button"
-            onClick={() => setItemTypeTab('part')}
-            className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              itemTypeTab === 'part'
+            onClick={() => setItemTypeTab('stock')}
+            className={`py-2 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              itemTypeTab === 'stock'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Package className="w-4 h-4 stroke-[2.2]" />
-            <span>{t.createInvoice.tabPart}</span>
+            <Package className="w-3.5 h-3.5 stroke-[2.2] flex-shrink-0" />
+            <span className="truncate">{t.createInvoice.tabStockPart || 'Stock Part'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setItemTypeTab('outside')}
+            className={`py-2 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              itemTypeTab === 'outside'
+                ? 'bg-purple-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5 stroke-[2.2] flex-shrink-0" />
+            <span className="truncate">{t.createInvoice.tabOutsidePart || 'Outside Part'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setItemTypeTab('work')}
-            className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`py-2 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
               itemTypeTab === 'work'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Wrench className="w-4 h-4 stroke-[2.2]" />
-            <span>{t.createInvoice.tabWork}</span>
+            <Wrench className="w-3.5 h-3.5 stroke-[2.2] flex-shrink-0" />
+            <span className="truncate">{t.createInvoice.tabWork || 'Labour'}</span>
           </button>
         </div>
 
-        {/* TAB A: ADD SPARE PART (WITH TYPO-TOLERANT SEARCH) */}
-        {itemTypeTab === 'part' && (
+        {/* TAB A: ADD SPARE PART FROM WORKSHOP STOCK */}
+        {itemTypeTab === 'stock' && (
           <form onSubmit={handleAddPart} className="space-y-3">
             {/* Quick Filter Search Input */}
             <div className="relative">
@@ -429,6 +520,19 @@ export default function CreateInvoiceView({
               </select>
             </div>
 
+            {searchedParts.length === 0 && (
+              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+                <span>{lang === 'ml' ? 'കടയിൽ സ്റ്റോക്കില്ലേ? പുറത്തുനിന്ന് വാങ്ങി നൽകാൻ:' : 'Not in workshop stock?'}</span>
+                <button
+                  type="button"
+                  onClick={() => setItemTypeTab('outside')}
+                  className="font-black text-purple-700 hover:underline"
+                >
+                  {lang === 'ml' ? 'പുറത്തുനിന്ന് വാങ്ങിയത് ടാബ് തുറക്കുക →' : 'Switch to Outside Part →'}
+                </button>
+              </div>
+            )}
+
             {selectedPart && (
               <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-200/80 flex items-center justify-between text-xs sm:text-sm">
                 <div className="min-w-0">
@@ -463,7 +567,6 @@ export default function CreateInvoiceView({
 
             {/* Stepper Quantity & Add Button Row */}
             <div className="flex items-center gap-2">
-              {/* Stepper Controls */}
               <div className="flex items-center border-2 border-slate-200 rounded-xl bg-white overflow-hidden flex-shrink-0">
                 <button
                   type="button"
@@ -508,9 +611,169 @@ export default function CreateInvoiceView({
           </form>
         )}
 
-        {/* TAB B: ADD WORK / LABOR */}
+        {/* TAB B: ADD OUTSIDE / PURCHASED PART (ZERO WORKSHOP STOCK DEDUCTED) */}
+        {itemTypeTab === 'outside' && (
+          <form onSubmit={handleAddOutsidePart} className="space-y-3">
+            {/* Friendly explanation notice */}
+            <div className="p-2.5 bg-purple-50 border border-purple-200/80 rounded-xl text-purple-950 text-xs flex items-center gap-2">
+              <Info className="w-4 h-4 text-purple-600 flex-shrink-0" />
+              <span className="leading-snug">
+                {t.createInvoice.outsidePartNotice ||
+                  'Billed to customer for this bike. Will NOT reduce your workshop stock.'}
+              </span>
+            </div>
+
+            {/* Part Name with Autocomplete */}
+            <div className="relative" ref={outsideAutocompleteRef}>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                {t.createInvoice.outsidePartNameLabel || 'Part Name'} <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={outsidePartName}
+                  onChange={(e) => {
+                    setOutsidePartName(e.target.value);
+                    setShowOutsideSuggestions(true);
+                  }}
+                  onFocus={() => setShowOutsideSuggestions(true)}
+                  placeholder={
+                    t.createInvoice.outsidePartNamePlaceholder ||
+                    'Type part name (e.g. Battery, Disc Rotor, Piston)...'
+                  }
+                  className="w-full text-xs sm:text-sm font-bold px-3 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-purple-600 focus:outline-none placeholder:text-slate-400"
+                />
+                {outsidePartName && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOutsidePartName('');
+                      setShowOutsideSuggestions(false);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Autocomplete Dropdown */}
+              {showOutsideSuggestions && outsideSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 max-h-48 overflow-y-auto z-40 divide-y divide-slate-100">
+                  {outsideSuggestions.map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setOutsidePartName(item.name);
+                        setShowOutsideSuggestions(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-purple-50 text-slate-800 flex items-center justify-between cursor-pointer transition-colors"
+                    >
+                      <span className="truncate">{item.name}</span>
+                      {item.category && (
+                        <span className="text-[10px] text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded ml-1 flex-shrink-0">
+                          {item.category}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Price & Quantity Row */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  {t.createInvoice.outsidePartPriceLabel || 'Price Charged (₹)'} <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="any"
+                    value={outsidePartPrice}
+                    onChange={(e) => setOutsidePartPrice(e.target.value)}
+                    placeholder="e.g. 250 or 0"
+                    className="w-full text-base font-black pl-7 pr-3 py-2 rounded-xl border-2 border-slate-200 bg-white focus:border-purple-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  {t.stock.quantity}
+                </label>
+                <div className="flex items-center border-2 border-slate-200 rounded-xl bg-white overflow-hidden h-[42px]">
+                  <button
+                    type="button"
+                    onClick={() => setOutsidePartQty((q) => Math.max(1, q - 1))}
+                    className="px-3 h-full text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    max={999}
+                    value={outsidePartQty}
+                    onChange={(e) => setOutsidePartQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="w-full text-center font-black text-sm focus:outline-none bg-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setOutsidePartQty((q) => q + 1)}
+                    className="px-3 h-full text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Customer Supplied (₹0) Shortcut Button & Add Button */}
+            <div className="flex items-center justify-between gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => setOutsidePartPrice('0')}
+                className="text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors cursor-pointer"
+              >
+                {lang === 'ml' ? '⚡ കസ്റ്റമർ തന്ന പാർട്ട് (₹0)' : '⚡ Customer supplied (₹0)'}
+              </button>
+
+              <button
+                type="submit"
+                disabled={!outsidePartName.trim() || outsidePartPrice === ''}
+                className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer flex-shrink-0"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
+                <span>{t.createInvoice.addOutsidePartBtn || 'Add Outside Part'}</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* TAB C: ADD WORK / LABOR */}
         {itemTypeTab === 'work' && (
           <form onSubmit={handleAddWork} className="space-y-2.5">
+            {/* Friendly explanation notice for customer-supplied parts */}
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-950 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="leading-snug">
+                {lang === 'ml'
+                  ? 'കസ്റ്റമർ സ്വന്തമായി പാർട്ട് കൊണ്ടുവന്നതാണോ? ഇവിടെ ഫിറ്റിംഗ് കൂലി മാത്രം നൽകി ബിൽ ചെയ്യാം.'
+                  : 'Customer brought own parts? Just add the fitting labour charge here for a labour-only bill.'}
+              </span>
+            </div>
+
             <div>
               <input
                 type="text"
@@ -609,12 +872,18 @@ export default function CreateInvoiceView({
                     <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium">
                       <span
                         className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
-                          item.item_type === 'part'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-emerald-50 text-emerald-700'
+                          item.item_type === 'part' && item.part_id
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : item.item_type === 'part' && !item.part_id
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         }`}
                       >
-                        {item.item_type === 'part' ? t.createInvoice.itemColPart : t.createInvoice.itemColWork}
+                        {item.item_type === 'part' && item.part_id
+                          ? (t.createInvoice.itemColStockPart || (lang === 'ml' ? 'സ്റ്റോക്ക് പാർട്ട്' : 'Stock Part'))
+                          : item.item_type === 'part' && !item.part_id
+                          ? (t.createInvoice.itemColOutsidePart || (lang === 'ml' ? 'പുറത്തുനിന്ന്' : 'Outside Part'))
+                          : (t.createInvoice.itemColWork || (lang === 'ml' ? 'പണിക്കൂലി' : 'Labour'))}
                       </span>
                       <span>
                         {item.quantity} × ₹{parseFloat(item.price).toFixed(0)}
@@ -722,20 +991,50 @@ export default function CreateInvoiceView({
                 </div>
               </div>
 
-              {partItemsCount > 0 && (
+              {/* Stock Items to be deducted */}
+              {stockItemsCount > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5">
                   <div className="text-xs font-bold uppercase text-amber-800 mb-1">
                     {t.createInvoice.stockDeductWarn}
                   </div>
                   <ul className="text-xs font-semibold text-amber-900 list-disc list-inside space-y-0.5 max-h-32 overflow-y-auto">
                     {items
-                      .filter((it) => it.item_type === 'part')
+                      .filter((it) => it.item_type === 'part' && it.part_id)
                       .map((it, i) => (
                         <li key={i} className="truncate">
                           {it.description} — {it.quantity} {t.stock.partsUnit}
                         </li>
                       ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Outside Purchased Items (Zero stock deducted) */}
+              {outsideItemsCount > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-2xl p-3.5">
+                  <div className="text-xs font-bold uppercase text-purple-900 mb-1">
+                    {t.createInvoice.outsidePartsWarning || 'Outside Purchased Parts (No workshop stock deducted):'}
+                  </div>
+                  <ul className="text-xs font-semibold text-purple-900 list-disc list-inside space-y-0.5 max-h-32 overflow-y-auto">
+                    {items
+                      .filter((it) => it.item_type === 'part' && !it.part_id)
+                      .map((it, i) => (
+                        <li key={i} className="truncate">
+                          {it.description} — {it.quantity} {t.stock.partsUnit} (₹{(parseFloat(it.price) || 0).toFixed(0)})
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Zero Stock Deduction Notification (Labour only or outside parts) */}
+              {stockItemsCount === 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex items-center gap-2 text-emerald-900 text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>
+                    {t.createInvoice.labourOnlyNotice ||
+                      'Zero workshop stock deducted (Labour only or outside parts).'}
+                  </span>
                 </div>
               )}
 
