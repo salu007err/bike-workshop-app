@@ -22,6 +22,7 @@ const db = await import('./src/services/db.js');
 const invService = await import('./src/services/invoiceService.js');
 const trans = await import('./src/services/translations.js');
 const aiAgent = await import('./src/services/aiAgent.js');
+const searchUtils = await import('./src/services/searchUtils.js');
 
 // Setup Pure Supabase Mock for automated test environment
 const mockPartsTable = [];
@@ -348,6 +349,59 @@ const pdfDoc = invService.generateInvoicePDFDoc(createdInvoice.data, 'റമീ�
 assert(pdfDoc && typeof pdfDoc.output === 'function', 'jsPDF document instance successfully generated');
 const pdfOutput = pdfDoc.output('arraybuffer');
 assert(pdfOutput.byteLength > 1000, `PDF generated with binary size: ${pdfOutput.byteLength} bytes`);
+
+// 13. Nullable Part Number & Nullable Image
+console.log('\nTest Suite 12: Nullable Part Number & Nullable Part Image');
+const partWithNumberAndImg = await db.addPart({
+  name: 'Spark Plug NGK CR7E',
+  price: 150,
+  quantity: 20,
+  part_number: '24101-KTC-900',
+  image_url: 'https://example.com/spark-plug.jpg',
+  note: 'Fits 125cc-150cc bikes'
+});
+assert(partWithNumberAndImg.success === true, 'Successfully added part with part_number and image_url');
+assert(partWithNumberAndImg.data.part_number === '24101-KTC-900', 'Part number correctly saved');
+assert(partWithNumberAndImg.data.image_url === 'https://example.com/spark-plug.jpg', 'Image URL correctly saved');
+
+// Adding part without part_number and without image_url (nullable verification)
+const partWithoutNullable = await db.addPart({
+  name: 'Chain Lubricant Spray',
+  price: 220,
+  quantity: 5,
+  part_number: null,
+  image_url: null,
+  note: 'Lube spray'
+});
+assert(partWithoutNullable.success === true, 'Part successfully created with null part_number and null image_url');
+assert(partWithoutNullable.data.part_number === null, 'Nullable part_number is null');
+assert(partWithoutNullable.data.image_url === null, 'Nullable image_url is null');
+
+// 14. Typo-Tolerant & Fuzzy Search Verification
+console.log('\nTest Suite 13: Typo-Tolerant & Fuzzy Search');
+const allStock = (await db.fetchParts()).data;
+
+// Query with misspelling "castol" should match "Castrol"
+const typoMatchesCastrol = searchUtils.fuzzyFilter(allStock, 'castol');
+assert(typoMatchesCastrol.length > 0 && typoMatchesCastrol[0].name.includes('Castrol'), 'Misspelling "castol" matches "Engine Oil 4T 20W40 (Castrol)"');
+
+// Query with misspelling "engne" should match "Engine Oil"
+const typoMatchesEngine = searchUtils.fuzzyFilter(allStock, 'engne');
+assert(typoMatchesEngine.length > 0 && typoMatchesEngine[0].name.includes('Engine Oil'), 'Misspelling "engne" matches "Engine Oil"');
+
+// Query with misspelling "brak" should match "Brake Shoe"
+const typoMatchesBrake = searchUtils.fuzzyFilter(allStock, 'brak');
+assert(typoMatchesBrake.length > 0 && typoMatchesBrake[0].name.includes('Brake Shoe'), 'Misspelling "brak" matches "Brake Shoe"');
+
+// Query with part number without hyphens "24101ktc" should match "24101-KTC-900"
+const partNumberSearch = searchUtils.fuzzyFilter(allStock, '24101ktc');
+assert(partNumberSearch.length > 0 && partNumberSearch[0].part_number === '24101-KTC-900', 'Part number search "24101ktc" matches "24101-KTC-900"');
+
+// Levenshtein distance check
+assert(searchUtils.levenshteinDistance('engine', 'engne') === 1, 'Levenshtein distance "engine" vs "engne" is 1');
+assert(searchUtils.levenshteinDistance('castrol', 'castol') === 1, 'Levenshtein distance "castrol" vs "castol" is 1');
+assert(searchUtils.levenshteinDistance('brake', 'brak') === 1, 'Levenshtein distance "brake" vs "brak" is 1');
+
 
 console.log('\n=======================================');
 console.log(`TOTAL TESTS: ${testsPassed + testsFailed}`);

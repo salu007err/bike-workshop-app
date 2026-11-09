@@ -12,7 +12,11 @@ import {
   History,
   ShieldCheck,
   X,
+  Search,
+  Hash,
+  Loader2,
 } from 'lucide-react';
+import { fuzzyFilter } from '../services/searchUtils';
 
 export default function CreateInvoiceView({
   parts,
@@ -27,11 +31,13 @@ export default function CreateInvoiceView({
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Active Tab for adding: 'part' or 'work'
   const [itemTypeTab, setItemTypeTab] = useState('part');
 
   // Part form state
+  const [partSearchQuery, setPartSearchQuery] = useState('');
   const [selectedPartId, setSelectedPartId] = useState('');
   const [partQty, setPartQty] = useState(1);
 
@@ -41,6 +47,11 @@ export default function CreateInvoiceView({
 
   // Selected part details
   const selectedPart = parts.find((p) => String(p.id) === String(selectedPartId));
+
+  // Typo-tolerant filtered parts for quick search selection
+  const searchedParts = partSearchQuery.trim()
+    ? fuzzyFilter(parts, partSearchQuery, ['name', 'part_number', 'note'])
+    : parts;
 
   // Compute live total
   const totalAmount = items.reduce((sum, item) => {
@@ -88,6 +99,7 @@ export default function CreateInvoiceView({
     ]);
 
     setSelectedPartId('');
+    setPartSearchQuery('');
     setPartQty(1);
     setError('');
   };
@@ -131,6 +143,8 @@ export default function CreateInvoiceView({
 
   const handleInitiateConfirm = (e) => {
     if (e) e.preventDefault();
+    if (isSubmitting || isCreating) return;
+
     if (!vehicleNumber.trim()) {
       setError(t.createInvoice.errVehicle);
       return;
@@ -162,39 +176,49 @@ export default function CreateInvoiceView({
   };
 
   const handleFinalConfirm = async () => {
-    const success = await onCreateInvoice({
-      vehicleNumber: vehicleNumber.trim().toUpperCase(),
-      items,
-      totalAmount,
-    });
-    if (success) {
-      setShowConfirmModal(false);
-      setVehicleNumber('');
-      setItems([]);
+    // Prevent double clicking duplicate invoices
+    if (isSubmitting || isCreating) return;
+
+    try {
+      setIsSubmitting(true);
+      setError('');
+      const success = await onCreateInvoice({
+        vehicleNumber: vehicleNumber.trim().toUpperCase(),
+        items,
+        totalAmount,
+      });
+      if (success) {
+        setShowConfirmModal(false);
+        setVehicleNumber('');
+        setItems([]);
+      }
+    } catch (err) {
+      setError(err?.message || 'Failed to create invoice');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const partItemsCount = items.filter((it) => it.item_type === 'part').length;
-  const workItemsCount = items.filter((it) => it.item_type === 'work').length;
 
   return (
-    <div className="max-w-4xl mx-auto px-3.5 sm:px-4 py-3 sm:py-5 space-y-3 sm:space-y-4 pb-28">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-3 sm:space-y-4 pb-36">
       {/* 1. TOP BAR */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-95 transition-all shadow-xs"
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-95 transition-all shadow-xs flex-shrink-0"
             title={t.createInvoice.backHome}
             aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-tight">
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-xl font-black text-slate-900 tracking-tight leading-tight truncate">
               {t.createInvoice.title}
             </h2>
-            <p className="text-[11px] text-slate-500 font-semibold">
+            <p className="text-[11px] text-slate-500 font-semibold truncate">
               {items.length} {t.createInvoice.currentItems}
             </p>
           </div>
@@ -202,7 +226,7 @@ export default function CreateInvoiceView({
 
         <button
           onClick={onViewHistory}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition-all"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition-all flex-shrink-0"
         >
           <History className="w-3.5 h-3.5 text-slate-600" />
           <span>{lang === 'ml' ? 'പഴയ ബില്ലുകൾ' : 'Past Bills'}</span>
@@ -212,22 +236,22 @@ export default function CreateInvoiceView({
       {/* Global Error Alert */}
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-bold rounded-2xl flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-            <span>{error}</span>
+            <span className="truncate">{error}</span>
           </div>
-          <button onClick={() => setError('')} className="p-1 text-red-400 hover:text-red-600">
+          <button onClick={() => setError('')} className="p-1 text-red-400 hover:text-red-600 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* 2. STEP 1: VEHICLE REGISTRATION NUMBER (NUMBER PLATE STYLE) */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-2">
+      {/* 2. STEP 1: VEHICLE REGISTRATION NUMBER */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-2">
         <label className="block text-xs font-black uppercase tracking-wider text-slate-600">
           {t.createInvoice.vehicleLabel} <span className="text-red-500">*</span>
         </label>
-        <div className="relative">
+        <div>
           <input
             type="text"
             required
@@ -237,13 +261,13 @@ export default function CreateInvoiceView({
             value={vehicleNumber}
             onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
             placeholder={t.createInvoice.vehiclePlaceholder}
-            className="w-full text-xl sm:text-2xl font-black uppercase tracking-wider px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
+            className="w-full text-lg sm:text-2xl font-black uppercase tracking-wider px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
           />
         </div>
       </div>
 
       {/* 3. STEP 2: ADD ITEMS (TABBED PICKER) */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
         {/* Sub-tabs: Spare Part vs Work */}
         <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
           <button
@@ -273,21 +297,44 @@ export default function CreateInvoiceView({
           </button>
         </div>
 
-        {/* TAB A: ADD SPARE PART */}
+        {/* TAB A: ADD SPARE PART (WITH TYPO-TOLERANT SEARCH) */}
         {itemTypeTab === 'part' && (
           <form onSubmit={handleAddPart} className="space-y-3">
+            {/* Quick Filter Search Input */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={partSearchQuery}
+                onChange={(e) => setPartSearchQuery(e.target.value)}
+                placeholder={t.createInvoice.searchPartPlaceholder || 'Type part name, number, or typo...'}
+                className="w-full text-xs font-semibold pl-9 pr-8 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none text-slate-800 placeholder-slate-400"
+              />
+              {partSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setPartSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Part Selection Dropdown */}
             <div>
               <select
                 value={selectedPartId}
                 onChange={(e) => setSelectedPartId(e.target.value)}
-                className="w-full text-sm font-bold px-3.5 py-3 rounded-xl border-2 border-slate-200 bg-white focus:border-blue-500 focus:outline-none text-slate-800"
+                className="w-full text-xs sm:text-sm font-bold px-3 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-blue-500 focus:outline-none text-slate-800"
               >
                 <option value="">{t.createInvoice.choosePart}</option>
-                {parts.map((p) => {
+                {searchedParts.map((p) => {
                   const isZero = (p.quantity || 0) <= 0;
+                  const partNumStr = p.part_number ? ` [${p.part_number}]` : '';
                   return (
                     <option key={p.id} value={p.id} disabled={isZero}>
-                      {p.name} — ₹{(parseFloat(p.price) || 0).toFixed(0)}{' '}
+                      {p.name}{partNumStr} — ₹{(parseFloat(p.price) || 0).toFixed(0)}{' '}
                       {isZero ? `(${t.stock.outOfStock})` : `(${p.quantity} ${t.stock.inStock})`}
                     </option>
                   );
@@ -297,15 +344,25 @@ export default function CreateInvoiceView({
 
             {selectedPart && (
               <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-200/80 flex items-center justify-between text-xs sm:text-sm">
-                <div>
-                  <span className="text-slate-500 font-medium">{t.createInvoice.partPrice} </span>
-                  <strong className="text-slate-900 text-base font-black">
-                    ₹{(parseFloat(selectedPart.price) || 0).toFixed(0)}
-                  </strong>
+                <div className="min-w-0">
+                  <div className="text-slate-900 font-bold truncate">
+                    {selectedPart.name}
+                    {selectedPart.part_number && (
+                      <span className="ml-1 text-[11px] font-mono font-normal text-blue-700 bg-blue-100/70 px-1 py-0.2 rounded">
+                        #{selectedPart.part_number}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-slate-500 font-medium mt-0.5">
+                    {t.createInvoice.partPrice}{' '}
+                    <strong className="text-slate-900 font-black">
+                      ₹{(parseFloat(selectedPart.price) || 0).toFixed(0)}
+                    </strong>
+                  </div>
                 </div>
                 <div>
                   <span
-                    className={`font-black text-xs px-2 py-0.5 rounded-lg ${
+                    className={`font-black text-xs px-2 py-0.5 rounded-lg flex-shrink-0 ${
                       (selectedPart.quantity || 0) > 0
                         ? 'bg-emerald-100 text-emerald-800'
                         : 'bg-red-100 text-red-700'
@@ -324,7 +381,7 @@ export default function CreateInvoiceView({
                 <button
                   type="button"
                   onClick={() => setPartQty((q) => Math.max(1, q - 1))}
-                  className="px-3 py-2.5 text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                  className="px-3 py-2 text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="w-4 h-4 stroke-[2.5]" />
@@ -336,7 +393,7 @@ export default function CreateInvoiceView({
                   max={selectedPart ? selectedPart.quantity : 999}
                   value={partQty}
                   onChange={(e) => setPartQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-12 text-center font-black text-base focus:outline-none bg-transparent"
+                  className="w-10 text-center font-black text-base focus:outline-none bg-transparent"
                 />
                 <button
                   type="button"
@@ -344,7 +401,7 @@ export default function CreateInvoiceView({
                     const maxQty = selectedPart ? selectedPart.quantity || 999 : 999;
                     setPartQty((q) => Math.min(maxQty, q + 1));
                   }}
-                  className="px-3 py-2.5 text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                  className="px-3 py-2 text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
                   aria-label="Increase quantity"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -355,10 +412,10 @@ export default function CreateInvoiceView({
               <button
                 type="submit"
                 disabled={!selectedPart || (selectedPart.quantity || 0) <= 0}
-                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer"
+                className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer whitespace-nowrap min-w-0"
               >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>{t.createInvoice.addPartBtn}</span>
+                <Plus className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
+                <span className="truncate">{t.createInvoice.addPartBtn}</span>
               </button>
             </div>
           </form>
@@ -373,10 +430,10 @@ export default function CreateInvoiceView({
                 value={workDescription}
                 onChange={(e) => setWorkDescription(e.target.value)}
                 placeholder={t.createInvoice.workDescPlaceholder}
-                className="w-full text-sm font-bold px-3.5 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-emerald-500 focus:outline-none placeholder:text-slate-400"
+                className="w-full text-xs sm:text-sm font-bold px-3.5 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-emerald-500 focus:outline-none placeholder:text-slate-400"
               />
 
-              {/* Horizontal Scroll Suggestion Chips */}
+              {/* Suggestion Chips */}
               <div className="mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
                 {t.suggestions.map((sug) => (
                   <button
@@ -392,7 +449,7 @@ export default function CreateInvoiceView({
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="relative flex-1">
+              <div className="relative flex-1 min-w-0">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
                   ₹
                 </span>
@@ -411,9 +468,9 @@ export default function CreateInvoiceView({
               <button
                 type="submit"
                 disabled={!workDescription.trim() || !workPrice}
-                className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer flex-shrink-0"
+                className="py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <Plus className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
                 <span>{t.createInvoice.addWorkBtn}</span>
               </button>
             </div>
@@ -422,7 +479,7 @@ export default function CreateInvoiceView({
       </div>
 
       {/* 4. STEP 3: CURRENT BILL ITEMS LIST */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
             {t.createInvoice.currentItems} ({items.length})
@@ -485,7 +542,7 @@ export default function CreateInvoiceView({
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(idx)}
-                      className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                       title="Remove"
                       aria-label="Remove item"
                     >
@@ -499,15 +556,15 @@ export default function CreateInvoiceView({
         )}
       </div>
 
-      {/* 5. STICKY BOTTOM ACTION BAR (MOBILE SUPERPOWER) */}
+      {/* 5. STICKY BOTTOM ACTION BAR (CLEAN, NO OVERLAP WITH BOTTOM NAV) */}
       {items.length > 0 && (
-        <div className="fixed bottom-14 left-0 right-0 z-30 bg-slate-900 text-white px-4 py-2.5 shadow-xl border-t border-slate-800 no-print">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+        <div className="fixed bottom-[56px] left-0 right-0 z-30 bg-slate-900 text-white px-3 sm:px-4 py-2 sm:py-2.5 shadow-xl border-t border-slate-800 no-print select-none">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block leading-tight">
                 {t.createInvoice.totalLabel}
               </span>
-              <div className="text-xl sm:text-2xl font-black text-emerald-400 leading-tight">
+              <div className="text-lg sm:text-2xl font-black text-emerald-400 leading-tight">
                 ₹{totalAmount.toFixed(0)}
               </div>
             </div>
@@ -515,11 +572,20 @@ export default function CreateInvoiceView({
             <button
               type="button"
               onClick={handleInitiateConfirm}
-              disabled={isCreating || !vehicleNumber.trim()}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-40 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all cursor-pointer flex-shrink-0"
+              disabled={isCreating || isSubmitting || !vehicleNumber.trim()}
+              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-40 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap"
             >
-              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-              <span>{t.createInvoice.confirmBtn}</span>
+              {isCreating || isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white flex-shrink-0" />
+                  <span>{t.createInvoice.creating || 'Creating...'}</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
+                  <span>{lang === 'ml' ? 'ബിൽ ഉണ്ടാക്കുക' : 'Confirm Bill'}</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -530,13 +596,14 @@ export default function CreateInvoiceView({
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
             <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-400 stroke-[2.5]" />
-                <h3 className="text-base sm:text-lg font-black">{t.createInvoice.confirmModalTitle}</h3>
+              <div className="flex items-center gap-2 min-w-0">
+                <ShieldCheck className="w-5 h-5 text-emerald-400 stroke-[2.5] flex-shrink-0" />
+                <h3 className="text-base sm:text-lg font-black truncate">{t.createInvoice.confirmModalTitle}</h3>
               </div>
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="p-1 rounded-xl text-slate-400 hover:text-white"
+                disabled={isCreating || isSubmitting}
+                className="p-1 rounded-xl text-slate-400 hover:text-white disabled:opacity-40"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -557,11 +624,11 @@ export default function CreateInvoiceView({
                   <div className="text-xs font-bold uppercase text-amber-800 mb-1">
                     {t.createInvoice.stockDeductWarn}
                   </div>
-                  <ul className="text-xs font-semibold text-amber-900 list-disc list-inside space-y-0.5">
+                  <ul className="text-xs font-semibold text-amber-900 list-disc list-inside space-y-0.5 max-h-32 overflow-y-auto">
                     {items
                       .filter((it) => it.item_type === 'part')
                       .map((it, i) => (
-                        <li key={i}>
+                        <li key={i} className="truncate">
                           {it.description} — {it.quantity} {t.stock.partsUnit}
                         </li>
                       ))}
@@ -576,25 +643,29 @@ export default function CreateInvoiceView({
                 </span>
               </div>
 
-              <div className="pt-2 grid grid-cols-2 gap-2">
+              <div className="pt-2 flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
+                  disabled={isCreating || isSubmitting}
                   onClick={() => setShowConfirmModal(false)}
-                  className="py-3 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs sm:text-sm active:scale-95 transition-all"
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs sm:text-sm active:scale-95 transition-all disabled:opacity-40"
                 >
                   {t.createInvoice.goBack}
                 </button>
                 <button
                   type="button"
-                  disabled={isCreating}
+                  disabled={isCreating || isSubmitting}
                   onClick={handleFinalConfirm}
-                  className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  {isCreating ? (
-                    <span>{t.createInvoice.creating}</span>
+                  {isCreating || isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white flex-shrink-0" />
+                      <span>{t.createInvoice.creating}</span>
+                    </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                      <CheckCircle2 className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
                       <span>{t.createInvoice.yesConfirm}</span>
                     </>
                   )}

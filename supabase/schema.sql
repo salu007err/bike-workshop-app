@@ -6,12 +6,18 @@
 CREATE TABLE IF NOT EXISTS parts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
+    part_number TEXT,
     price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
     quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
     note TEXT,
+    image_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Idempotent schema upgrades for existing databases
+ALTER TABLE parts ADD COLUMN IF NOT EXISTS part_number TEXT;
+ALTER TABLE parts ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 -- 2. Invoices Table
 CREATE TABLE IF NOT EXISTS invoices (
@@ -38,6 +44,7 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_parts_name ON parts(name);
+CREATE INDEX IF NOT EXISTS idx_parts_part_number ON parts(part_number);
 CREATE INDEX IF NOT EXISTS idx_invoices_vehicle ON invoices(vehicle_number);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items(invoice_id);
 

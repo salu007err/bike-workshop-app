@@ -178,11 +178,13 @@ export async function fetchParts() {
   }
 }
 
-export async function addPart({ name, price, quantity, note = '' }) {
+export async function addPart({ name, price, quantity, note = '', part_number = null, image_url = null }) {
   const cleanName = (name || '').trim();
   const numPrice = Math.max(0, parseFloat(price) || 0);
   const numQty = Math.max(0, parseInt(quantity, 10) || 0);
   const cleanNote = (note || '').trim();
+  const cleanPartNumber = (part_number || '').trim() || null;
+  const cleanImageUrl = (image_url || '').trim() || null;
 
   if (!cleanName) {
     return { success: false, error: 'Part name is required' };
@@ -196,7 +198,16 @@ export async function addPart({ name, price, quantity, note = '' }) {
   try {
     const { data, error } = await supabase
       .from('parts')
-      .insert([{ name: cleanName, price: numPrice, quantity: numQty, note: cleanNote }])
+      .insert([
+        {
+          name: cleanName,
+          price: numPrice,
+          quantity: numQty,
+          note: cleanNote,
+          part_number: cleanPartNumber,
+          image_url: cleanImageUrl,
+        },
+      ])
       .select()
       .single();
 
@@ -208,11 +219,13 @@ export async function addPart({ name, price, quantity, note = '' }) {
   }
 }
 
-export async function updatePart(id, { name, price, quantity, note = '' }) {
+export async function updatePart(id, { name, price, quantity, note = '', part_number = null, image_url = null }) {
   const cleanName = (name || '').trim();
   const numPrice = Math.max(0, parseFloat(price) || 0);
   const numQty = Math.max(0, parseInt(quantity, 10) || 0);
   const cleanNote = (note || '').trim();
+  const cleanPartNumber = (part_number || '').trim() || null;
+  const cleanImageUrl = (image_url || '').trim() || null;
 
   if (!cleanName) {
     return { success: false, error: 'Part name is required' };
@@ -231,6 +244,8 @@ export async function updatePart(id, { name, price, quantity, note = '' }) {
         price: numPrice,
         quantity: numQty,
         note: cleanNote,
+        part_number: cleanPartNumber,
+        image_url: cleanImageUrl,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

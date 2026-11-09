@@ -1,22 +1,39 @@
-import React, { useState } from 'react';
-import { X, PlusCircle, PackageCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, PlusCircle, PackageCheck, Loader2 } from 'lucide-react';
 
 export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t, lang }) {
   const [addQty, setAddQty] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setAddQty('');
+    setError('');
+    setIsSubmitting(false);
+  }, [isOpen, part]);
 
   if (!isOpen || !part) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Prevent double-clicking / duplicate stock increments
+    if (isSubmitting) return;
+
     const parsed = parseInt(addQty, 10);
     if (isNaN(parsed) || parsed <= 0) {
       setError(t.quickStockModal.errInvalid);
       return;
     }
-    onConfirm(part.id, parsed);
-    setAddQty('');
-    setError('');
+
+    try {
+      setIsSubmitting(true);
+      setError('');
+      await onConfirm(part.id, parsed);
+    } catch (err) {
+      setError(err?.message || (lang === 'ml' ? 'സ്റ്റോക്ക് ചേർക്കാൻ കഴിഞ്ഞില്ല' : 'Failed to add stock'));
+      setIsSubmitting(false);
+    }
   };
 
   const currentStock = parseInt(part.quantity, 10) || 0;
@@ -24,6 +41,7 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t
   const newTotal = currentStock + parsedAdd;
 
   const handlePreset = (num) => {
+    if (isSubmitting) return;
     setAddQty(String(num));
     setError('');
   };
@@ -38,7 +56,8 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-xl text-slate-400 hover:text-white"
+            disabled={isSubmitting}
+            className="p-1 rounded-xl text-slate-400 hover:text-white disabled:opacity-40"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -75,11 +94,12 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t
               min="1"
               step="1"
               required
+              disabled={isSubmitting}
               autoFocus
               value={addQty}
               onChange={(e) => setAddQty(e.target.value)}
               placeholder="e.g. 5"
-              className="w-full text-2xl font-black px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 text-center"
+              className="w-full text-2xl font-black px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 text-center disabled:bg-slate-100"
             />
 
             {/* Quick Presets for fast 1-tap additions */}
@@ -88,8 +108,9 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t
                 <button
                   key={num}
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => handlePreset(num)}
-                  className="py-1.5 px-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                  className="py-1.5 px-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:opacity-40"
                 >
                   +{num}
                 </button>
@@ -109,17 +130,28 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t
           <div className="pt-2 grid grid-cols-2 gap-2">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="py-2.5 px-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs"
+              className="py-2.5 px-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs disabled:opacity-40"
             >
               {t.quickStockModal.cancel}
             </button>
             <button
               type="submit"
-              className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+              disabled={isSubmitting}
+              className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-black text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>{t.quickStockModal.confirm}</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>{t.quickStockModal.adding || 'Adding...'}</span>
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="w-4 h-4" />
+                  <span>{t.quickStockModal.confirm}</span>
+                </>
+              )}
             </button>
           </div>
         </form>
