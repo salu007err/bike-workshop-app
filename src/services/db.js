@@ -436,6 +436,7 @@ export async function fetchInvoices() {
  */
 export async function createInvoiceWithStockDeduction({
   vehicleNumber,
+  vehicleModel = null,
   kmReading = null,
   items,
   totalAmount,
@@ -443,6 +444,7 @@ export async function createInvoiceWithStockDeduction({
   workshopName = 'BIKE WORKSHOP',
 }) {
   const cleanVehicle = (vehicleNumber || '').toUpperCase().trim();
+  const cleanVehicleModel = (vehicleModel || '').trim() || null;
   const cleanKm = (kmReading || '').trim() || null;
   if (!cleanVehicle) {
     return { success: false, error: 'Vehicle registration number is required' };
@@ -548,14 +550,25 @@ export async function createInvoiceWithStockDeduction({
     if (cleanKm) {
       invoicePayload.km_reading = cleanKm;
     }
+    if (cleanVehicleModel) {
+      invoicePayload.vehicle_model = cleanVehicleModel;
+    }
 
     let newInv = null;
     let invInsertRes = await supabase.from('invoices').insert([invoicePayload]).select().single();
 
     if (invInsertRes.error) {
-      // Fallback if km_reading column is not yet in Supabase schema cache
+      // Fallback if km_reading or vehicle_model column is not yet in Supabase schema cache
+      let modified = false;
       if (invoicePayload.km_reading && (invInsertRes.error.code === 'PGRST204' || (invInsertRes.error.message || '').includes('km_reading'))) {
         delete invoicePayload.km_reading;
+        modified = true;
+      }
+      if (invoicePayload.vehicle_model && (invInsertRes.error.code === 'PGRST204' || (invInsertRes.error.message || '').includes('vehicle_model'))) {
+        delete invoicePayload.vehicle_model;
+        modified = true;
+      }
+      if (modified) {
         invInsertRes = await supabase.from('invoices').insert([invoicePayload]).select().single();
       }
     }
@@ -563,6 +576,9 @@ export async function createInvoiceWithStockDeduction({
     newInv = invInsertRes.data;
     if (cleanKm && !newInv.km_reading) {
       newInv.km_reading = cleanKm;
+    }
+    if (cleanVehicleModel && !newInv.vehicle_model) {
+      newInv.vehicle_model = cleanVehicleModel;
     }
 
     // 3. Insert invoice items into Supabase
@@ -614,12 +630,14 @@ export async function createInvoiceWithStockDeduction({
 export async function updateInvoiceWithStockDeduction({
   invoiceId,
   vehicleNumber,
+  vehicleModel = null,
   kmReading = null,
   items,
   totalAmount,
   workshopName = 'BIKE WORKSHOP',
 }) {
   const cleanVehicle = (vehicleNumber || '').toUpperCase().trim();
+  const cleanVehicleModel = vehicleModel !== undefined && vehicleModel !== null ? (vehicleModel || '').trim() || null : undefined;
   const cleanKm = kmReading !== undefined && kmReading !== null ? (kmReading || '').trim() || null : undefined;
   if (!cleanVehicle) {
     return { success: false, error: 'Vehicle registration number is required' };
@@ -728,6 +746,9 @@ export async function updateInvoiceWithStockDeduction({
     if (cleanKm !== undefined) {
       updatePayload.km_reading = cleanKm;
     }
+    if (cleanVehicleModel !== undefined) {
+      updatePayload.vehicle_model = cleanVehicleModel;
+    }
 
     let updatedInv = null;
     let updateInvRes = await supabase
@@ -738,8 +759,16 @@ export async function updateInvoiceWithStockDeduction({
       .single();
 
     if (updateInvRes.error) {
+      let modified = false;
       if (updatePayload.km_reading !== undefined && (updateInvRes.error.code === 'PGRST204' || (updateInvRes.error.message || '').includes('km_reading'))) {
         delete updatePayload.km_reading;
+        modified = true;
+      }
+      if (updatePayload.vehicle_model !== undefined && (updateInvRes.error.code === 'PGRST204' || (updateInvRes.error.message || '').includes('vehicle_model'))) {
+        delete updatePayload.vehicle_model;
+        modified = true;
+      }
+      if (modified) {
         updateInvRes = await supabase
           .from('invoices')
           .update(updatePayload)
@@ -752,6 +781,9 @@ export async function updateInvoiceWithStockDeduction({
     updatedInv = updateInvRes.data;
     if (cleanKm && !updatedInv.km_reading) {
       updatedInv.km_reading = cleanKm;
+    }
+    if (cleanVehicleModel && !updatedInv.vehicle_model) {
+      updatedInv.vehicle_model = cleanVehicleModel;
     }
 
     // 6. Delete old invoice items and insert new ones

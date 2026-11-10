@@ -98,9 +98,45 @@ export default function HomeView({
         </button>
       </div>
 
-      {/* 2. PRIMARY ACTION CARDS (ERGONOMIC, THUMB-FRIENDLY) */}
+      {/* 2. PRIMARY ACTION CARDS: FIRST STOCK, THEN BILL */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        {/* CARD 1: CREATE INVOICE (PRIMARY HIGHLIGHT FOR WORKSHOP) */}
+        {/* CARD 1: STOCK MANAGEMENT (FIRST) */}
+        <div
+          onClick={() => onSelectSection('stock')}
+          className="group relative bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-3xl p-5 sm:p-6 shadow-md shadow-blue-600/20 active:scale-[0.99] transition-all cursor-pointer flex flex-col justify-between overflow-hidden border border-blue-500"
+        >
+          {/* Subtle background glow */}
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-white/10 blur-xl pointer-events-none" />
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                <Package className="w-6 h-6 text-white stroke-[2.5]" />
+              </div>
+              <span className="text-[10px] uppercase font-black tracking-widest bg-blue-400/30 text-blue-100 px-2.5 py-1 rounded-full border border-blue-300/30">
+                {totalPartsCount} {lang === 'ml' ? 'പാർട്സ്' : 'Parts'}
+              </span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white mb-1">
+              {t.home.stockBtn}
+            </h3>
+            <p className="text-blue-100 text-xs sm:text-sm font-medium leading-relaxed">
+              {t.home.stockDesc}
+            </p>
+          </div>
+
+          <div className="mt-5 pt-3 border-t border-white/15 flex items-center justify-between">
+            <span className="font-extrabold text-sm text-white flex items-center gap-1.5">
+              <span>{t.home.openStock}</span>
+            </span>
+            <div className="w-8 h-8 rounded-full bg-white text-blue-700 flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
+              <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+            </div>
+          </div>
+        </div>
+
+        {/* CARD 2: CREATE INVOICE / BILL (SECOND) */}
         <div
           onClick={() => onSelectSection('invoice')}
           className="group relative bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-3xl p-5 sm:p-6 shadow-md shadow-emerald-600/20 active:scale-[0.99] transition-all cursor-pointer flex flex-col justify-between overflow-hidden border border-emerald-500"
@@ -114,7 +150,7 @@ export default function HomeView({
                 <FileText className="w-6 h-6 text-white stroke-[2.5]" />
               </div>
               <span className="text-[10px] uppercase font-black tracking-widest bg-emerald-400/30 text-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300/30">
-                {lang === 'ml' ? 'പ്രധാനം' : 'Fast'}
+                {lang === 'ml' ? '+ പുതിയ ബിൽ' : '+ New Bill'}
               </span>
             </div>
 
@@ -131,39 +167,6 @@ export default function HomeView({
               <span>{t.home.startInvoice}</span>
             </span>
             <div className="w-8 h-8 rounded-full bg-white text-emerald-700 flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-            </div>
-          </div>
-        </div>
-
-        {/* CARD 2: STOCK MANAGEMENT */}
-        <div
-          onClick={() => onSelectSection('stock')}
-          className="group relative bg-white hover:bg-slate-50 text-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/90 active:scale-[0.99] transition-all cursor-pointer flex flex-col justify-between overflow-hidden"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center">
-                <Package className="w-6 h-6 stroke-[2.5]" />
-              </div>
-              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                {totalPartsCount} {lang === 'ml' ? 'പാർട്സ്' : 'Parts'}
-              </span>
-            </div>
-
-            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 mb-1">
-              {t.home.stockBtn}
-            </h3>
-            <p className="text-slate-500 text-xs sm:text-sm font-medium leading-relaxed">
-              {t.home.stockDesc}
-            </p>
-          </div>
-
-          <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span className="font-extrabold text-sm text-blue-600 flex items-center gap-1.5">
-              <span>{t.home.openStock}</span>
-            </span>
-            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:translate-x-1 transition-transform">
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
@@ -200,6 +203,11 @@ export default function HomeView({
                     <span className="font-black text-slate-900 text-sm tracking-wide truncate">
                       {(inv.vehicle_number || '').toUpperCase()}
                     </span>
+                    {inv.vehicle_model && (
+                      <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                        {inv.vehicle_model}
+                      </span>
+                    )}
                     {inv.km_reading && (
                       <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
                         <Gauge className="w-2.5 h-2.5 text-indigo-500 flex-shrink-0" />

@@ -49,17 +49,26 @@ export function generateInvoicePDFDoc(invoice, workshopName = 'BIKE WORKSHOP') {
   doc.text('INVOICE', pageWidth - 41, 17);
 
   // Invoice Details Box
+  const hasExtraRow = !!invoice.vehicle_model;
+  const boxHeight = hasExtraRow ? 34 : 28;
   doc.setFillColor(248, 250, 252); // slate-50
   doc.setDrawColor(226, 232, 240); // slate-200
-  doc.roundedRect(14, 38, pageWidth - 28, 28, 2, 2, 'FD');
+  doc.roundedRect(14, 38, pageWidth - 28, boxHeight, 2, 2, 'FD');
 
   doc.setTextColor(51, 65, 85);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text('VEHICLE REGISTRATION NUMBER', 20, 46);
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setTextColor(15, 23, 42);
-  doc.text((invoice.vehicle_number || 'N/A').toUpperCase(), 20, 56);
+  doc.text((invoice.vehicle_number || 'N/A').toUpperCase(), 20, 55);
+
+  if (invoice.vehicle_model) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);
+    doc.text(`MODEL: ${invoice.vehicle_model.toUpperCase()}`, 20, 64);
+  }
 
   // Optional KM Reading in details box
   if (invoice.km_reading) {
@@ -72,19 +81,19 @@ export function generateInvoicePDFDoc(invoice, workshopName = 'BIKE WORKSHOP') {
     doc.text('KILOMETRE (KM):', 105, 46);
     doc.setFontSize(13);
     doc.setTextColor(15, 23, 42);
-    doc.text(cleanKm, 105, 56);
+    doc.text(cleanKm, 105, 55);
   }
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(100, 116, 139);
   doc.text('INVOICE NO:', pageWidth - 80, 46);
-  doc.text('DATE:', pageWidth - 80, 56);
+  doc.text('DATE:', pageWidth - 80, 55);
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10);
   doc.text(invoice.invoice_number || 'N/A', pageWidth - 50, 46);
-  doc.text(formatDate(invoice.date || invoice.created_at), pageWidth - 50, 56);
+  doc.text(formatDate(invoice.date || invoice.created_at), pageWidth - 50, 55);
 
   // Items Table
   const tableRows = (invoice.items || []).map((item, index) => {
@@ -106,7 +115,7 @@ export function generateInvoicePDFDoc(invoice, workshopName = 'BIKE WORKSHOP') {
   });
 
   autoTable(doc, {
-    startY: 72,
+    startY: hasExtraRow ? 77 : 72,
     head: [['#', 'Description', 'Type', 'Qty', 'Rate', 'Amount']],
     body: tableRows,
     theme: 'striped',
@@ -194,6 +203,9 @@ export function getWhatsAppInvoiceMessage(invoice, workshopName = 'BIKE WORKSHOP
   msg += isMl ? `*ബിൽ നമ്പർ:* ${invoice.invoice_number || 'N/A'}\n` : `*Invoice No:* ${invoice.invoice_number || 'N/A'}\n`;
   msg += isMl ? `*തീയതി:* ${dateStr}\n` : `*Date:* ${dateStr}\n`;
   msg += isMl ? `*വണ്ടി നമ്പർ:* ${vehicle}\n` : `*Vehicle No:* ${vehicle}\n`;
+  if (invoice.vehicle_model) {
+    msg += isMl ? `*വാഹനം (Model):* ${invoice.vehicle_model}\n` : `*Vehicle Model:* ${invoice.vehicle_model}\n`;
+  }
   if (invoice.km_reading) {
     const cleanKm = invoice.km_reading.toUpperCase().includes('KM')
       ? invoice.km_reading.toUpperCase()

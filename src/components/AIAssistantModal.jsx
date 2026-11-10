@@ -6,16 +6,8 @@ import {
   Database,
   Trash2,
   Sparkles,
-  Key,
-  Check,
-  RotateCcw,
 } from 'lucide-react';
-import {
-  queryAIAssistant,
-  getStoredGeminiKey,
-  saveStoredGeminiKey,
-  removeStoredGeminiKey,
-} from '../services/aiAgent';
+import { queryAIAssistant } from '../services/aiAgent';
 
 export default function AIAssistantModal({
   isOpen,
@@ -35,13 +27,8 @@ export default function AIAssistantModal({
   ]);
   const [inputQuery, setInputQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showKeyConfig, setShowKeyConfig] = useState(false);
-  const [customKeyInput, setCustomKeyInput] = useState('');
-  const [saveStatusMsg, setSaveStatusMsg] = useState('');
 
   const messagesEndRef = useRef(null);
-  const geminiInfo = getStoredGeminiKey();
-  const hasGeminiKey = !!geminiInfo?.key;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,9 +37,6 @@ export default function AIAssistantModal({
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
-      if (geminiInfo?.isCustom) {
-        setCustomKeyInput(geminiInfo.key);
-      }
     }
   }, [messages, isOpen]);
 
@@ -123,32 +107,6 @@ export default function AIAssistantModal({
     }
   };
 
-  const handleSaveCustomKey = (e) => {
-    e.preventDefault();
-    const clean = (customKeyInput || '').trim();
-    if (clean) {
-      saveStoredGeminiKey(clean);
-      setSaveStatusMsg(lang === 'ml' ? 'Gemini കീ സേവ് ചെയ്തു!' : 'Gemini API Key saved!');
-    } else {
-      removeStoredGeminiKey();
-      setSaveStatusMsg(lang === 'ml' ? 'കീ നീക്കം ചെയ്തു' : 'Custom key removed');
-    }
-    setTimeout(() => {
-      setSaveStatusMsg('');
-      setShowKeyConfig(false);
-    }, 2000);
-  };
-
-  const handleResetKey = () => {
-    removeStoredGeminiKey();
-    setCustomKeyInput('');
-    setSaveStatusMsg(lang === 'ml' ? 'ഡീഫോൾട്ട് സെറ്റിംഗ് പുനഃസ്ഥാപിച്ചു' : 'Reset to default');
-    setTimeout(() => {
-      setSaveStatusMsg('');
-      setShowKeyConfig(false);
-    }, 2000);
-  };
-
   const handleClearChat = () => {
     setMessages([
       {
@@ -192,19 +150,10 @@ export default function AIAssistantModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-sm sm:text-base text-white">{t.aiAgent.title}</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowKeyConfig(!showKeyConfig)}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer border ${
-                    hasGeminiKey
-                      ? 'bg-indigo-500/20 text-indigo-300 border-indigo-400/30 hover:bg-indigo-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border-amber-400/30 hover:bg-amber-500/30'
-                  }`}
-                  title="Configure Google Gemini API Key"
-                >
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
                   <Sparkles className="w-2.5 h-2.5" />
-                  <span>{hasGeminiKey ? 'Gemini AI Active' : 'Setup Gemini Key'}</span>
-                </button>
+                  <span>Gemini AI</span>
+                </span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium">
                 {parts.length} {t.aiAgent.partsCount} • {invoices.length} {t.aiAgent.invoicesCount}
@@ -213,15 +162,6 @@ export default function AIAssistantModal({
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowKeyConfig(!showKeyConfig)}
-              className={`p-1.5 rounded-lg hover:text-white hover:bg-slate-800 transition-colors ${
-                showKeyConfig ? 'text-blue-400 bg-slate-800' : 'text-slate-400'
-              }`}
-              title="API Key Settings"
-            >
-              <Key className="w-4 h-4" />
-            </button>
             <button
               onClick={handleClearChat}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
@@ -238,63 +178,6 @@ export default function AIAssistantModal({
             </button>
           </div>
         </div>
-
-        {/* Gemini API Key Configuration Drawer */}
-        {showKeyConfig && (
-          <div className="bg-slate-900 border-b border-slate-800 p-3 text-xs text-slate-300 animate-in slide-in-from-top duration-150">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Google Gemini AI API Key</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowKeyConfig(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-400 mb-2 leading-relaxed">
-              {lang === 'ml'
-                ? 'Google AI Studio (aistudio.google.com) വഴി ലഭിക്കുന്ന API കീ നൽകി തത്സമയ ബൈക്ക് റിപ്പയർ AI നിർദ്ദേശങ്ങൾ ഉപയോഗിക്കാം.'
-                : 'Enter your API key from Google AI Studio (aistudio.google.com) for unlimited motorcycle diagnosis & mechanic advice.'}
-            </p>
-            <form onSubmit={handleSaveCustomKey} className="space-y-2">
-              <div className="flex gap-1.5">
-                <input
-                  type="password"
-                  value={customKeyInput}
-                  onChange={(e) => setCustomKeyInput(e.target.value)}
-                  placeholder="AIzaSy..."
-                  className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-indigo-500"
-                />
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>{lang === 'ml' ? 'സേവ്' : 'Save'}</span>
-                </button>
-                {geminiInfo?.isCustom && (
-                  <button
-                    type="button"
-                    onClick={handleResetKey}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs cursor-pointer"
-                    title="Reset to default key"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              {saveStatusMsg && (
-                <div className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                  <span>✓ {saveStatusMsg}</span>
-                </div>
-              )}
-            </form>
-          </div>
-        )}
 
         {/* Chat Messages Body */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 bg-slate-50/70">

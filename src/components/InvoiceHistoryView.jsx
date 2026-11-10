@@ -23,11 +23,22 @@ export default function InvoiceHistoryView({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
+  const cleanTerm = searchTerm.trim().toLowerCase();
+  const cleanSearchNoSpaces = cleanTerm.replace(/[\s-]/g, '');
+
   const filteredInvoices = invoices.filter((inv) => {
-    const term = searchTerm.toLowerCase();
-    const vehicleMatch = (inv.vehicle_number || '').toLowerCase().includes(term);
-    const numMatch = (inv.invoice_number || '').toLowerCase().includes(term);
-    return vehicleMatch || numMatch;
+    if (!cleanTerm) return true;
+    const rawVehicle = (inv.vehicle_number || '').toLowerCase();
+    const cleanVehicle = rawVehicle.replace(/[\s-]/g, '');
+    const model = (inv.vehicle_model || '').toLowerCase();
+    const invNum = (inv.invoice_number || '').toLowerCase();
+
+    return (
+      rawVehicle.includes(cleanTerm) ||
+      cleanVehicle.includes(cleanSearchNoSpaces) ||
+      model.includes(cleanTerm) ||
+      invNum.includes(cleanTerm)
+    );
   });
 
   return (
@@ -59,7 +70,7 @@ export default function InvoiceHistoryView({
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={t.history.searchPlaceholder}
+          placeholder={lang === 'ml' ? 'വണ്ടി നമ്പർ, മോഡൽ നൽകി തിരയുക (ഉദാ: KL 07, 1234, Activa)...' : 'Search vehicle number, model, or bill no (e.g. KL 07, 1234, Activa)...'}
           className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-white border border-slate-200 focus:border-emerald-500 focus:outline-none text-sm font-semibold text-slate-800 placeholder-slate-400 shadow-xs"
         />
         {searchTerm && (
@@ -123,6 +134,11 @@ export default function InvoiceHistoryView({
                     <span className="text-base sm:text-lg font-black text-slate-900 tracking-wide truncate">
                       {(inv.vehicle_number || '').toUpperCase()}
                     </span>
+                    {inv.vehicle_model && (
+                      <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                        {inv.vehicle_model}
+                      </span>
+                    )}
                     {inv.km_reading && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
                         <Gauge className="w-3 h-3 text-indigo-500 flex-shrink-0" />

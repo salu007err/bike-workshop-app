@@ -203,8 +203,15 @@ export default function InvoiceDetailModal({
               <div className="text-[10px] font-bold uppercase text-slate-400">
                 {t.invoiceDetail.vehicleNo}
               </div>
-              <div className="text-xl font-black text-slate-900 tracking-wider">
-                {(invoice.vehicle_number || '').toUpperCase()}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xl font-black text-slate-900 tracking-wider">
+                  {(invoice.vehicle_number || '').toUpperCase()}
+                </span>
+                {invoice.vehicle_model && (
+                  <span className="px-2 py-0.5 rounded-lg bg-blue-100 text-blue-800 text-xs font-black">
+                    {invoice.vehicle_model}
+                  </span>
+                )}
               </div>
               {invoice.km_reading && (
                 <div className="text-xs font-bold text-blue-700 flex items-center gap-1 mt-0.5">

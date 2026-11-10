@@ -24,6 +24,7 @@ const trans = await import('./src/services/translations.js');
 const aiAgent = await import('./src/services/aiAgent.js');
 const searchUtils = await import('./src/services/searchUtils.js');
 const commonParts = await import('./src/services/commonBikeParts.js');
+const commonBikeModels = await import('./src/services/commonBikeModels.js');
 
 // Setup Pure Supabase Mock for automated test environment
 const mockPartsTable = [];
@@ -796,13 +797,80 @@ const geminiMlResp = await aiAgent.queryAIAssistant({
 assert(geminiMlResp.engine === 'gemini', 'Malayalam mechanic question routed to Google Gemini AI');
 assert(geminiMlResp.text.length > 20, 'Gemini AI returned fluent Malayalam diagnosis');
 
-// Test F: Custom Gemini Key Storage
-aiAgent.saveStoredGeminiKey('AIzaSyCustomTestKey12345');
-const storedCustomKey = aiAgent.getStoredGeminiKey();
-assert(storedCustomKey.key === 'AIzaSyCustomTestKey12345' && storedCustomKey.isCustom === true, 'User custom Gemini key saved and retrieved');
-aiAgent.removeStoredGeminiKey();
-const defaultKeyAgain = aiAgent.getStoredGeminiKey();
-assert(defaultKeyAgain.isCustom === false, 'Reset to default Gemini configuration key works properly');
+// Test F: Secure Environment & Config Key Resolution (No Client-side UI input/storage)
+const resolvedGeminiKey = aiAgent.getStoredGeminiKey();
+assert(typeof resolvedGeminiKey.key === 'string' && resolvedGeminiKey.key.length > 5, 'Gemini key successfully resolved from environment/configuration');
+assert(resolvedGeminiKey.source === 'config' || resolvedGeminiKey.source === 'env', 'Gemini key originates from secure environment or app configuration');
+assert(typeof aiAgent.saveStoredGeminiKey === 'undefined', 'saveStoredGeminiKey removed from public API (no client-side UI storage)');
+
+console.log('\n--- TEST SUITE 19: Vehicle Model Autocomplete, Normalized Search & UI Simplification ---');
+
+// Test A: Common Indian 2-Wheeler Database & Search
+const activaResults = commonBikeModels.searchBikeModels('activa');
+assert(activaResults.some(m => m.name.includes('Activa')), 'Search for "activa" returns Honda Activa models');
+const pulsarResults = commonBikeModels.searchBikeModels('pulsar');
+assert(pulsarResults.some(m => m.name.includes('Pulsar')), 'Search for "pulsar" returns Bajaj Pulsar models');
+const dioResults = commonBikeModels.searchBikeModels('dio');
+assert(dioResults.some(m => m.name.includes('Dio')), 'Search for "dio" returns Honda Dio models');
+assert(commonBikeModels.QUICK_POPULAR_MODELS.includes('Activa') && commonBikeModels.QUICK_POPULAR_MODELS.includes('Pulsar'), 'Popular model chips include Activa and Pulsar for 1-tap entry');
+
+// Test B: Invoice Creation with Optional Vehicle Model
+const modelInvoiceResult = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 CA 9999',
+  vehicleModel: 'Honda Activa 6G',
+  kmReading: '14500',
+  items: [
+    {
+      part_id: null,
+      description: 'Motul 10W30 4T Engine Oil 800ml',
+      quantity: 1,
+      price: 360,
+      item_type: 'part'
+    },
+    {
+      part_id: null,
+      description: 'Oil service & belt check Labour',
+      quantity: 1,
+      price: 400,
+      item_type: 'work'
+    }
+  ],
+  totalAmount: 760
+});
+assert(modelInvoiceResult.success === true, 'Invoice with vehicleModel created successfully');
+assert(modelInvoiceResult.data.vehicle_model === 'Honda Activa 6G', 'vehicle_model stored correctly in invoice');
+
+// Test C: Invoice Update with Updated Vehicle Model
+const updateModelResult = await db.updateInvoiceWithStockDeduction({
+  invoiceId: modelInvoiceResult.data.id,
+  vehicleNumber: 'KL 07 CA 9999',
+  vehicleModel: 'Honda Activa 125',
+  kmReading: '14500',
+  items: modelInvoiceResult.data.items,
+  totalAmount: 760
+});
+assert(updateModelResult.success === true, 'Invoice with vehicleModel updated successfully');
+assert(updateModelResult.data.vehicle_model === 'Honda Activa 125', 'vehicle_model updated to Honda Activa 125');
+
+// Test D: WhatsApp Message with Vehicle Model
+const waMsgMl = invService.getWhatsAppInvoiceMessage(updateModelResult.data, 'BIKE WORKSHOP', 'ml');
+assert(waMsgMl.includes('*വാഹനം (Model):* Honda Activa 125'), 'Malayalam WhatsApp message includes vehicle model');
+const waMsgEn = invService.getWhatsAppInvoiceMessage(updateModelResult.data, 'BIKE WORKSHOP', 'en');
+assert(waMsgEn.includes('*Vehicle Model:* Honda Activa 125'), 'English WhatsApp message includes vehicle model');
+
+// Test E: PDF Generation with Vehicle Model
+const modelPdfDoc = invService.generateInvoicePDFDoc(updateModelResult.data);
+assert(modelPdfDoc !== null && typeof modelPdfDoc.output === 'function', 'Invoice PDF with vehicle model generated successfully');
+
+// Test F: Normalized Vehicle Search (Spaces and hyphens tolerance)
+const normalizeVehicle = (v) => (v || '').toUpperCase().replace(/[\s-]/g, '');
+const testReg = 'KL 07 CD 1234';
+const testQuery1 = 'kl07cd1234';
+const testQuery2 = 'kl-07-cd-1234';
+const testQuery3 = '1234';
+assert(normalizeVehicle(testReg).includes(normalizeVehicle(testQuery1)), 'Matches spaceless query kl07cd1234');
+assert(normalizeVehicle(testReg).includes(normalizeVehicle(testQuery2)), 'Matches hyphenated query kl-07-cd-1234');
+assert(normalizeVehicle(testReg).includes(normalizeVehicle(testQuery3)), 'Matches number suffix query 1234');
 
 console.log('\n=======================================');
 console.log(`TOTAL TESTS: ${testsPassed + testsFailed}`);

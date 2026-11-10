@@ -13,8 +13,6 @@
 
 import { AI_CONFIG } from '../config/supabaseConfig.js';
 
-const STORAGE_KEY = 'bike_workshop_gemini_key';
-
 // Working model candidates in order of priority (tested with Google Generative Language v1beta API)
 const GEMINI_MODELS = [
   'gemini-3.5-flash-lite',
@@ -24,29 +22,11 @@ const GEMINI_MODELS = [
 ];
 
 /**
- * Resolves Gemini API key with priority:
- * 1. User custom key in localStorage ('bike_workshop_gemini_key')
- * 2. Vite environment variable (VITE_GEMINI_API_KEY)
- * 3. Pre-configured key in supabaseConfig.js
+ * Resolves Gemini API key securely from environment variables or application configuration.
+ * Client-side UI key inputs are completely avoided.
  */
 export function getStoredGeminiKey() {
-  // 1. Check user-configured key in localStorage
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const userKey = localStorage.getItem(STORAGE_KEY);
-      if (userKey && userKey.trim() !== '') {
-        return {
-          key: userKey.trim(),
-          source: 'user',
-          isCustom: true,
-        };
-      }
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  // 2. Check environment variable
+  // 1. Check environment variable
   if (
     typeof import.meta !== 'undefined' &&
     import.meta.env?.VITE_GEMINI_API_KEY &&
@@ -55,11 +35,10 @@ export function getStoredGeminiKey() {
     return {
       key: import.meta.env.VITE_GEMINI_API_KEY.trim(),
       source: 'env',
-      isCustom: false,
     };
   }
 
-  // 3. Check configuration file
+  // 2. Check configuration file
   if (
     AI_CONFIG?.GEMINI_API_KEY &&
     AI_CONFIG.GEMINI_API_KEY.trim() !== '' &&
@@ -68,46 +47,10 @@ export function getStoredGeminiKey() {
     return {
       key: AI_CONFIG.GEMINI_API_KEY.trim(),
       source: 'config',
-      isCustom: false,
     };
   }
 
   return null;
-}
-
-/**
- * Saves user custom Gemini API key into localStorage
- */
-export function saveStoredGeminiKey(key) {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const clean = (key || '').trim();
-      if (clean) {
-        localStorage.setItem(STORAGE_KEY, clean);
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-      return true;
-    }
-  } catch (e) {
-    console.warn('Error saving Gemini key:', e);
-  }
-  return false;
-}
-
-/**
- * Clears custom Gemini API key from localStorage
- */
-export function removeStoredGeminiKey() {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY);
-      return true;
-    }
-  } catch (e) {
-    // ignore
-  }
-  return false;
 }
 
 /**
@@ -208,11 +151,10 @@ export function isStoredWorkshopQuery(userQuery, parts = [], invoices = []) {
 
   // 6. In-app how-to guides: WhatsApp share
   if (
-    (q.includes('how') && q.includes('whatsapp')) ||
-    (q.includes('share') && q.includes('whatsapp')) ||
-    q.includes('വാട്സാപ്പിൽ എങ്ങനെ') ||
-    q.includes('വാട്ട്സാപ്പിൽ എങ്ങനെ') ||
-    q.includes('വാട്സാപ്പ് ഷെയർ')
+    q.includes('whatsapp') ||
+    q.includes('വാട്സാപ്പ്') ||
+    q.includes('വാട്ട്സാപ്പ്') ||
+    (q.includes('share') && (q.includes('bill') || q.includes('invoice')))
   ) {
     return true;
   }
@@ -557,19 +499,18 @@ export async function queryAIAssistant({ userQuery, parts = [], invoices = [], l
     if (geminiResult.error === 'invalid_key') {
       return {
         text: isMl
-          ? `⚠️ നൽകിയിട്ടുള്ള Google Gemini API കീ അസാധുവാണ് (Invalid Key). ദയവായി ക്രമീകരണങ്ങളിൽ പുതിയ കീ നൽകുക (Google AI Studio വഴി നേടാം).`
-          : `⚠️ The configured Google Gemini API key appears to be invalid or expired. Please update your key in settings via Google AI Studio.`,
+          ? `⚠️ Google Gemini കണക്ഷൻ ലഭ്യമല്ല. വർക്ക്ഷോപ്പ് സ്റ്റോക്ക് അല്ലെങ്കിൽ ബിൽ വിവരങ്ങൾ പരിശോധിക്കാം.`
+          : `⚠️ Google Gemini service is currently unavailable. You can check workshop stock or invoices anytime.`,
         engine: 'error',
       };
     }
   }
 
   // Step 3: Fallback if Gemini key is missing or failed
-  // Provide intelligent mechanic fallback response
   return {
     text: isMl
-      ? `💡 Google Gemini AI വഴി കൂടുതൽ വിശദമായ ബൈക്ക് റിപ്പയർ നിർദ്ദേശങ്ങളും മെക്കാനിക് സഹായങ്ങളും ലഭിക്കാൻ മുകളിലെ 🔑 ഐക്കൺ ക്ലിക്ക് ചെയ്ത് നിങ്ങളുടെ Gemini API കീ നൽകുക.\n\nവർക്ക്ഷോപ്പ് സ്റ്റോക്ക്, ബില്ലിംഗ്, വണ്ടി നമ്പർ തിരയൽ തുടങ്ങിയ കാര്യങ്ങൾ എപ്പോൾ വേണമെങ്കിലും ചോദിക്കാം!`
-      : `💡 To unlock full AI motorcycle repair diagnosis and mechanic advice, please configure your Google Gemini API Key by clicking the 🔑 button in the header.\n\nYou can ask about workshop stock, bills, and vehicle searches anytime!`,
+      ? `👋 നമസ്കാരം! വർക്ക്ഷോപ്പ് സ്റ്റോക്ക് വിവരങ്ങൾ, പുതിയ ബിൽ തയ്യാറാക്കൽ, വണ്ടി നമ്പർ തിരയൽ തുടങ്ങിയ കാര്യങ്ങൾ എപ്പോൾ വേണമെങ്കിലും ചോദിക്കാം!`
+      : `👋 Hello! You can ask about workshop stock, bill creation, and vehicle searches anytime!`,
     engine: 'builtin',
   };
 }

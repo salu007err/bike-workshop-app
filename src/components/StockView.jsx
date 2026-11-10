@@ -11,6 +11,7 @@ import {
   X,
   Hash,
   Image as ImageIcon,
+  Eye,
 } from 'lucide-react';
 import PartModal from './PartModal';
 import AddStockQuickModal from './AddStockQuickModal';
@@ -238,23 +239,27 @@ export default function StockView({
               >
                 {/* Top Row: Thumbnail + Part Name + Part Number + Price */}
                 <div className="flex items-start gap-2.5 justify-between">
-                  {/* Optional Image Thumbnail */}
-                  {part.image_url && (
+                  {/* Image Thumbnail with Direct Click-to-View */}
+                  {part.image_url ? (
                     <button
                       type="button"
                       onClick={() => setViewImagePart(part)}
-                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 bg-slate-100 group cursor-pointer"
+                      className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-blue-200 flex-shrink-0 bg-slate-100 group cursor-pointer shadow-xs active:scale-95 transition-all"
                       title={lang === 'ml' ? 'ഫോട്ടോ വലുതായി കാണുക' : 'Click to view photo'}
                     >
                       <img
                         src={part.image_url}
                         alt={part.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                       />
-                      <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <ImageIcon className="w-4 h-4 text-white" />
+                      <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                        <Eye className="w-4 h-4 text-white drop-shadow" />
                       </div>
                     </button>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Package className="w-5 h-5 text-slate-400" />
+                    </div>
                   )}
 
                   <div className="min-w-0 flex-1">
@@ -268,6 +273,18 @@ export default function StockView({
                           <Hash className="w-2.5 h-2.5" />
                           <span>{part.part_number}</span>
                         </span>
+                      )}
+                      {/* Direct View Photo Pill */}
+                      {part.image_url && (
+                        <button
+                          type="button"
+                          onClick={() => setViewImagePart(part)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 text-[10px] font-black cursor-pointer active:scale-95"
+                          title={lang === 'ml' ? 'ഫോട്ടോ വലുതായി കാണുക' : 'View photo'}
+                        >
+                          <Eye className="w-3 h-3 text-blue-700" />
+                          <span>{lang === 'ml' ? 'ഫോട്ടോ കാണുക' : 'View Photo'}</span>
+                        </button>
                       )}
                     </div>
 
