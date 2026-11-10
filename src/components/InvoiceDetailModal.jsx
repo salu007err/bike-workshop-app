@@ -11,6 +11,7 @@ import {
   Calendar,
   Edit2,
   Gauge,
+  Trash2,
 } from 'lucide-react';
 import {
   downloadInvoicePDF,
@@ -25,6 +26,7 @@ export default function InvoiceDetailModal({
   workshopName,
   onCancelInvoice,
   onEditInvoice,
+  onDeleteInvoice,
   onCreateNew,
   lang,
   t,
@@ -34,6 +36,7 @@ export default function InvoiceDetailModal({
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [showPhonePrompt, setShowPhonePrompt] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!isOpen || !invoice) return null;
 
@@ -74,6 +77,17 @@ export default function InvoiceDetailModal({
       setIsCancelling(true);
       await onCancelInvoice(invoice.id);
       setIsCancelling(false);
+    }
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (window.confirm(t.invoiceDetail.deleteConfirm)) {
+      setIsDeleting(true);
+      if (onDeleteInvoice) {
+        await onDeleteInvoice(invoice.id);
+      }
+      setIsDeleting(false);
+      onClose();
     }
   };
 
@@ -288,20 +302,32 @@ export default function InvoiceDetailModal({
         </div>
 
         {/* 4. MODAL BOTTOM FOOTER */}
-        <div className="bg-slate-100 border-t border-slate-200 px-4 py-3 flex items-center justify-between gap-2 no-print flex-shrink-0">
-          {!isCancelled && onCancelInvoice ? (
-            <button
-              onClick={handleCancelInvoice}
-              disabled={isCancelling}
-              className="text-red-600 hover:text-red-700 font-bold text-xs flex items-center gap-1 py-1.5 px-2 rounded-lg hover:bg-red-50"
-              title="Cancel bill"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>{lang === 'ml' ? 'റദ്ദാക്കുക' : 'Cancel'}</span>
-            </button>
-          ) : (
-            <div />
-          )}
+        <div className="bg-slate-100 border-t border-slate-200 px-3 sm:px-4 py-3 flex flex-wrap items-center justify-between gap-2 no-print flex-shrink-0">
+          <div className="flex items-center gap-1.5">
+            {!isCancelled && onCancelInvoice && (
+              <button
+                onClick={handleCancelInvoice}
+                disabled={isCancelling || isDeleting}
+                className="text-amber-700 hover:text-amber-800 font-bold text-xs flex items-center gap-1 py-1.5 px-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100/80 active:scale-95 transition-all cursor-pointer"
+                title="Cancel bill"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                <span>{lang === 'ml' ? 'റദ്ദാക്കുക' : 'Cancel'}</span>
+              </button>
+            )}
+
+            {onDeleteInvoice && (
+              <button
+                onClick={handleDeleteInvoice}
+                disabled={isDeleting || isCancelling}
+                className="text-red-600 hover:text-red-700 font-bold text-xs flex items-center gap-1 py-1.5 px-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100/80 active:scale-95 transition-all cursor-pointer"
+                title={lang === 'ml' ? 'ബിൽ ഡിലീറ്റ് ചെയ്യുക' : 'Delete bill permanently'}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                <span>{lang === 'ml' ? 'ഡിലീറ്റ്' : 'Delete'}</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             {!isCancelled && onEditInvoice && (
@@ -325,7 +351,7 @@ export default function InvoiceDetailModal({
             )}
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-bold text-xs"
+              className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-bold text-xs cursor-pointer"
             >
               {t.invoiceDetail.close}
             </button>

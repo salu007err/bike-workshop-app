@@ -19,6 +19,7 @@ import {
   createInvoiceWithStockDeduction,
   updateInvoiceWithStockDeduction,
   cancelInvoice,
+  deleteInvoice,
   getWorkshopConfig,
   saveWorkshopConfig,
   getSupabaseClient,
@@ -81,11 +82,16 @@ export default function App() {
   // Check Supabase & load pure cloud data
   const loadData = async () => {
     setIsLoadingParts(true);
+    setIsLoadingInvoices(true);
     const client = getSupabaseClient();
     setIsSupabaseConnected(!!client);
 
     try {
-      const partsRes = await fetchParts();
+      const [partsRes, invRes] = await Promise.all([
+        fetchParts(),
+        fetchInvoices(),
+      ]);
+
       if (partsRes.success) {
         setParts(partsRes.data || []);
         setIsTableMissing(false);
@@ -95,14 +101,7 @@ export default function App() {
         }
         console.warn('Supabase parts fetch:', partsRes.error);
       }
-    } catch (err) {
-      console.error('Error loading parts from Supabase:', err);
-    } finally {
-      setIsLoadingParts(false);
-    }
 
-    try {
-      const invRes = await fetchInvoices();
       if (invRes.success) {
         setInvoices(invRes.data || []);
       } else {
@@ -111,7 +110,10 @@ export default function App() {
         }
       }
     } catch (err) {
-      console.error('Error loading invoices from Supabase:', err);
+      console.error('Error loading Supabase data:', err);
+    } finally {
+      setIsLoadingParts(false);
+      setIsLoadingInvoices(false);
     }
   };
 
@@ -291,6 +293,21 @@ export default function App() {
     }
   };
 
+  // Invoice deletion (Direct Supabase)
+  const handleDeleteInvoice = async (invoiceId) => {
+    const res = await deleteInvoice(invoiceId);
+    if (res.success) {
+      showToast(lang === 'ml' ? 'ബിൽ ഡിലീറ്റ് ചെയ്തു' : 'Invoice permanently deleted');
+      setInvoices((prev) => prev.filter((i) => i.id !== invoiceId));
+      if (activeInvoice && activeInvoice.id === invoiceId) {
+        setActiveInvoice(null);
+      }
+      await loadData();
+    } else {
+      showToast(res.error || (lang === 'ml' ? 'ഡിലീറ്റ് ചെയ്യാൻ കഴിഞ്ഞില്ല' : 'Failed to delete invoice'), 'error');
+    }
+  };
+
   const handleSaveWorkshopConfig = (newConfig) => {
     saveWorkshopConfig(newConfig);
     setWorkshopConfig(newConfig);
@@ -410,6 +427,7 @@ export default function App() {
             onSelectInvoice={(inv) => setActiveInvoice(inv)}
             onCancelInvoice={handleCancelInvoice}
             onEditInvoice={handleStartEditInvoice}
+            onDeleteInvoice={handleDeleteInvoice}
             t={t}
             lang={lang}
           />
@@ -445,6 +463,7 @@ export default function App() {
         workshopName={workshopConfig.workshopName}
         onCancelInvoice={handleCancelInvoice}
         onEditInvoice={handleStartEditInvoice}
+        onDeleteInvoice={handleDeleteInvoice}
         onCreateNew={() => {
           setEditingInvoice(null);
           setActiveInvoice(null);

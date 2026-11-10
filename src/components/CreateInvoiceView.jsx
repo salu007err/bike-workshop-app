@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ArrowLeft,
   Plus,
@@ -116,10 +116,12 @@ export default function CreateInvoiceView({
   // Selected part details
   const selectedPart = parts.find((p) => String(p.id) === String(selectedPartId));
 
-  // Typo-tolerant filtered parts for quick search selection
-  const searchedParts = partSearchQuery.trim()
-    ? fuzzyFilter(parts, partSearchQuery, ['name', 'part_number', 'note'])
-    : parts;
+  // Typo-tolerant filtered parts for quick search selection (memoized for maximum UI responsiveness)
+  const searchedParts = useMemo(() => {
+    return partSearchQuery.trim()
+      ? fuzzyFilter(parts, partSearchQuery, ['name', 'part_number', 'note'])
+      : parts;
+  }, [parts, partSearchQuery]);
 
   // Autocomplete suggestions for outside part name
   useEffect(() => {
@@ -145,12 +147,14 @@ export default function CreateInvoiceView({
     };
   }, []);
 
-  // Compute live total
-  const totalAmount = items.reduce((sum, item) => {
-    const qty = parseInt(item.quantity, 10) || 1;
-    const price = parseFloat(item.price) || 0;
-    return sum + qty * price;
-  }, 0);
+  // Compute live total (memoized)
+  const totalAmount = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const qty = parseInt(item.quantity, 10) || 1;
+      const price = parseFloat(item.price) || 0;
+      return sum + qty * price;
+    }, 0);
+  }, [items]);
 
   // Add Part to current bill
   const handleAddPart = (e) => {
@@ -1099,15 +1103,19 @@ export default function CreateInvoiceView({
         )}
       </div>
 
-      {/* 5. STICKY BOTTOM ACTION BAR (CLEAN, NO OVERLAP WITH BOTTOM NAV) */}
-      {items.length > 0 && (
-        <div className="fixed bottom-[56px] left-0 right-0 z-30 bg-slate-900 text-white px-3 sm:px-4 py-2 sm:py-2.5 shadow-xl border-t border-slate-800 no-print select-none">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block leading-tight">
-                {t.createInvoice.totalLabel}
-              </span>
-              <div className="text-lg sm:text-2xl font-black text-emerald-400 leading-tight">
+        {/* 5. IN-PAGE TOTAL & CONFIRM BILL SECTION (DIRECTLY IN FORM, NEVER HIDDEN) */}
+        {items.length > 0 && (
+          <div className="bg-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs uppercase font-bold text-slate-400 tracking-wider block">
+                  {t.createInvoice.totalLabel}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {items.length} {t.createInvoice.currentItems}
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-400">
                 ₹{totalAmount.toFixed(0)}
               </div>
             </div>
@@ -1116,7 +1124,53 @@ export default function CreateInvoiceView({
               type="button"
               onClick={handleInitiateConfirm}
               disabled={isCreating || isSubmitting || !vehicleNumber.trim()}
-              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-40 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap ${
+              className={`w-full py-3.5 px-4 rounded-xl text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-md active:scale-98 disabled:opacity-40 transition-all cursor-pointer ${
+                editingInvoice
+                  ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30'
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
+              }`}
+            >
+              {isCreating || isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin text-white flex-shrink-0" />
+                  <span>
+                    {editingInvoice
+                      ? (t.createInvoice.updating || 'Updating...')
+                      : (t.createInvoice.creating || 'Creating...')}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.5] flex-shrink-0" />
+                  <span>
+                    {editingInvoice
+                      ? (t.createInvoice.updateBtn || 'Update Invoice')
+                      : (lang === 'ml' ? 'ബിൽ ഉണ്ടാക്കുക (Confirm Bill)' : 'Confirm & Create Bill')}
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+      {/* 6. FLOATING QUICK ACTION BAR (CLEAN, ELEVATED ABOVE BOTTOM NAV WITH SAFE CLEARANCE) */}
+      {items.length > 0 && (
+        <div className="fixed bottom-[72px] sm:bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-slate-900/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 no-print select-none animate-in slide-in-from-bottom duration-150">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block leading-tight">
+                {t.createInvoice.totalLabel}
+              </span>
+              <div className="text-lg sm:text-xl font-black text-emerald-400 leading-tight truncate">
+                ₹{totalAmount.toFixed(0)}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleInitiateConfirm}
+              disabled={isCreating || isSubmitting || !vehicleNumber.trim()}
+              className={`px-4 sm:px-5 py-2.5 rounded-xl text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-40 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap ${
                 editingInvoice
                   ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30'
                   : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
@@ -1146,11 +1200,11 @@ export default function CreateInvoiceView({
         </div>
       )}
 
-      {/* 6. CONFIRMATION BOTTOM-SHEET / MODAL */}
+      {/* 7. CONFIRMATION MODAL - FULLY CENTERED ON ALL SCREENS, NEVER HIDDEN BY HOME BAR */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-            <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col my-auto">
+            <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <ShieldCheck className="w-5 h-5 text-emerald-400 stroke-[2.5] flex-shrink-0" />
                 <h3 className="text-base sm:text-lg font-black truncate">
@@ -1168,7 +1222,7 @@ export default function CreateInvoiceView({
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 space-y-3.5">
+            <div className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
               <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] uppercase font-bold text-slate-400">
@@ -1250,7 +1304,7 @@ export default function CreateInvoiceView({
                 </span>
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              <div className="pt-2 flex flex-col sm:flex-row gap-2 flex-shrink-0">
                 <button
                   type="button"
                   disabled={isCreating || isSubmitting}

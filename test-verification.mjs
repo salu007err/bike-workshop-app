@@ -127,6 +127,13 @@ const mockSupabase = {
               then: (resolve) => resolve({ data: inv || null, error: inv ? null : { message: 'Not found' } })
             };
           }
+        }),
+        delete: () => ({
+          eq: (col, val) => {
+            const idx = mockInvoicesTable.findIndex((i) => String(i[col]) === String(val));
+            if (idx !== -1) mockInvoicesTable.splice(idx, 1);
+            return Promise.resolve({ error: null });
+          }
         })
       };
     }
@@ -871,6 +878,58 @@ const testQuery3 = '1234';
 assert(normalizeVehicle(testReg).includes(normalizeVehicle(testQuery1)), 'Matches spaceless query kl07cd1234');
 assert(normalizeVehicle(testReg).includes(normalizeVehicle(testQuery2)), 'Matches hyphenated query kl-07-cd-1234');
 assert(normalizeVehicle(testReg).includes(normalizeVehicle(testQuery3)), 'Matches number suffix query 1234');
+
+console.log('\n--- TEST SUITE 20: Invoice Deletion & Part Image Cache Persistence ---');
+
+// Test A: Create Part with Image & verify persistence
+const delTestPart = await db.addPart({
+  name: 'Brembo Brake Lever',
+  price: 350,
+  quantity: 5,
+  image_url: 'data:image/jpeg;base64,mockBremboImageBase64'
+});
+assert(delTestPart.data.image_url === 'data:image/jpeg;base64,mockBremboImageBase64', 'Part created with image URL');
+assert(db.getStoredPartImage(delTestPart.data.id) === 'data:image/jpeg;base64,mockBremboImageBase64', 'Part image persisted in local fallback store');
+
+// Fetch parts and ensure image_url is returned
+const fetchedPartsWithImg = await db.fetchParts();
+const foundPart = fetchedPartsWithImg.data.find(p => p.id === delTestPart.data.id);
+assert(foundPart && foundPart.image_url === 'data:image/jpeg;base64,mockBremboImageBase64', 'Fetched parts preserve image_url from persistent store');
+
+// Test B: Create invoice to deduct stock, then delete invoice and verify stock restoration
+const invForDeletion = await db.createInvoiceWithStockDeduction({
+  vehicleNumber: 'KL 07 ZZ 1111',
+  items: [
+    {
+      part_id: delTestPart.data.id,
+      description: 'Brembo Brake Lever',
+      quantity: 2,
+      price: 350,
+      item_type: 'part'
+    }
+  ],
+  totalAmount: 700
+});
+assert(invForDeletion.success === true, 'Invoice created for deletion test');
+
+const stockAfterDelInvCreate = (await db.fetchParts()).data.find(p => p.id === delTestPart.data.id);
+assert(stockAfterDelInvCreate.quantity === 3, 'Stock deducted to 3 before deletion');
+
+// Test C: Delete invoice permanently and verify stock restoration
+const deleteResult = await db.deleteInvoice(invForDeletion.data.id);
+assert(deleteResult.success === true, 'Invoice successfully deleted from database');
+
+// Verify invoice is gone from database
+const invoicesAfterDel = (await db.fetchInvoices()).data;
+assert(!invoicesAfterDel.some(i => i.id === invForDeletion.data.id), 'Invoice no longer exists in invoices table');
+
+// Verify stock was automatically restored back to 5
+const stockAfterDel = (await db.fetchParts()).data.find(p => p.id === delTestPart.data.id);
+assert(stockAfterDel.quantity === 5, 'Deducted stock automatically restored to 5 upon invoice deletion');
+
+// Test D: Part image deletion when part is deleted
+await db.deletePart(delTestPart.data.id);
+assert(db.getStoredPartImage(delTestPart.data.id) === null, 'Part image cleaned up from local store when part is deleted');
 
 console.log('\n=======================================');
 console.log(`TOTAL TESTS: ${testsPassed + testsFailed}`);

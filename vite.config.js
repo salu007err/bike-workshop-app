@@ -5,4 +5,22 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('jspdf') || id.includes('html2canvas')) {
+            return 'vendor_pdf';
+          }
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'vendor_react';
+          }
+          if (id.includes('@supabase')) {
+            return 'vendor_supabase';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 800,
+  },
 })

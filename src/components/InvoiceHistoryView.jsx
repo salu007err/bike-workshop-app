@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
   Search,
@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Edit2,
   Gauge,
+  Trash2,
 } from 'lucide-react';
 import { formatDate } from '../services/invoiceService';
 
@@ -17,29 +18,42 @@ export default function InvoiceHistoryView({
   onSelectInvoice,
   onEditInvoice,
   onCancelInvoice,
+  onDeleteInvoice,
   isLoading,
   t,
   lang,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const cleanTerm = searchTerm.trim().toLowerCase();
-  const cleanSearchNoSpaces = cleanTerm.replace(/[\s-]/g, '');
+  const filteredInvoices = useMemo(() => {
+    const cleanTerm = searchTerm.trim().toLowerCase();
+    if (!cleanTerm) return invoices;
+    const cleanSearchNoSpaces = cleanTerm.replace(/[\s-]/g, '');
 
-  const filteredInvoices = invoices.filter((inv) => {
-    if (!cleanTerm) return true;
-    const rawVehicle = (inv.vehicle_number || '').toLowerCase();
-    const cleanVehicle = rawVehicle.replace(/[\s-]/g, '');
-    const model = (inv.vehicle_model || '').toLowerCase();
-    const invNum = (inv.invoice_number || '').toLowerCase();
+    return invoices.filter((inv) => {
+      const rawVehicle = (inv.vehicle_number || '').toLowerCase();
+      const cleanVehicle = rawVehicle.replace(/[\s-]/g, '');
+      const model = (inv.vehicle_model || '').toLowerCase();
+      const invNum = (inv.invoice_number || '').toLowerCase();
 
-    return (
-      rawVehicle.includes(cleanTerm) ||
-      cleanVehicle.includes(cleanSearchNoSpaces) ||
-      model.includes(cleanTerm) ||
-      invNum.includes(cleanTerm)
-    );
-  });
+      return (
+        rawVehicle.includes(cleanTerm) ||
+        cleanVehicle.includes(cleanSearchNoSpaces) ||
+        model.includes(cleanTerm) ||
+        invNum.includes(cleanTerm)
+      );
+    });
+  }, [invoices, searchTerm]);
+
+  const handleDeleteClick = async (e, invoiceId) => {
+    e.stopPropagation();
+    const msg = t.invoiceDetail?.deleteConfirm || (lang === 'ml' ? 'ഈ ബിൽ പൂർണ്ണമായി ഡിലീറ്റ് ചെയ്യണോ?' : 'Permanently delete this invoice?');
+    if (window.confirm(msg)) {
+      if (onDeleteInvoice) {
+        await onDeleteInvoice(invoiceId);
+      }
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-3.5 sm:px-4 py-3 sm:py-5 space-y-3 sm:space-y-4">
@@ -172,6 +186,18 @@ export default function InvoiceHistoryView({
                       aria-label="Edit invoice"
                     >
                       <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {onDeleteInvoice && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteClick(e, inv.id)}
+                      className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 active:scale-95 transition-all cursor-pointer"
+                      title={lang === 'ml' ? 'ബിൽ ഡിലീറ്റ് ചെയ്യുക' : 'Delete Invoice'}
+                      aria-label="Delete invoice"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
 

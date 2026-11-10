@@ -147,6 +147,52 @@ export function clearAllLocalData() {
   }
 }
 
+// ---------------- Part Image Local Cache Helpers ----------------
+// Ensures part photos are NEVER lost, even if remote Supabase schema cache lacks the 'image_url' column.
+const PART_IMAGES_STORAGE_KEY = 'bike_workshop_part_images_cache';
+
+export function getStoredPartImages() {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(PART_IMAGES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function getStoredPartImage(partId) {
+  if (!partId) return null;
+  const images = getStoredPartImages();
+  return images[String(partId)] || null;
+}
+
+export function saveStoredPartImage(partId, imageUrl) {
+  if (!partId || typeof localStorage === 'undefined') return;
+  try {
+    const images = getStoredPartImages();
+    if (imageUrl) {
+      images[String(partId)] = imageUrl;
+    } else {
+      delete images[String(partId)];
+    }
+    localStorage.setItem(PART_IMAGES_STORAGE_KEY, JSON.stringify(images));
+  } catch (e) {
+    console.warn('Failed to cache part image locally:', e);
+  }
+}
+
+export function removeStoredPartImage(partId) {
+  if (!partId || typeof localStorage === 'undefined') return;
+  try {
+    const images = getStoredPartImages();
+    delete images[String(partId)];
+    localStorage.setItem(PART_IMAGES_STORAGE_KEY, JSON.stringify(images));
+  } catch (e) {
+    // ignore
+  }
+}
+
 // ---------------- Pure Supabase CRUD API ----------------
 
 export async function fetchParts() {
@@ -171,7 +217,21 @@ export async function fetchParts() {
       };
     }
 
-    return { success: true, data: data || [], source: 'supabase' };
+    // Merge persistent image cache in case remote schema lacks image_url column
+    const cachedImages = getStoredPartImages();
+    const partsWithImages = (data || []).map((p) => {
+      const cached = cachedImages[String(p.id)];
+      // If remote has image, update cache; if remote lacks image, use cached
+      if (p.image_url && !cached) {
+        saveStoredPartImage(p.id, p.image_url);
+      }
+      return {
+        ...p,
+        image_url: p.image_url || cached || null,
+      };
+    });
+
+    return { success: true, data: partsWithImages, source: 'supabase' };
   } catch (err) {
     return { success: false, error: err.message, source: 'supabase' };
   }
@@ -232,12 +292,17 @@ export async function addPart({ name, price, quantity, note = '', part_number = 
           .single();
 
         if (fbErr) throw fbErr;
+
+        if (fbData?.id && cleanImageUrl) {
+          saveStoredPartImage(fbData.id, cleanImageUrl);
+        }
+
         return {
           success: true,
           data: {
             ...fbData,
-            part_number: fbData?.part_number || null,
-            image_url: fbData?.image_url || null,
+            part_number: fbData?.part_number || cleanPartNumber || null,
+            image_url: fbData?.image_url || cleanImageUrl || null,
           },
           isSchemaUpgradeNeeded: true,
           source: 'supabase',
@@ -245,12 +310,17 @@ export async function addPart({ name, price, quantity, note = '', part_number = 
       }
       throw error;
     }
+
+    if (data?.id && cleanImageUrl) {
+      saveStoredPartImage(data.id, cleanImageUrl);
+    }
+
     return {
       success: true,
       data: {
         ...data,
-        part_number: data?.part_number || null,
-        image_url: data?.image_url || null,
+        part_number: data?.part_number || cleanPartNumber || null,
+        image_url: data?.image_url || cleanImageUrl || null,
       },
       source: 'supabase',
     };
@@ -318,12 +388,19 @@ export async function updatePart(id, { name, price, quantity, note = '', part_nu
           .single();
 
         if (fbErr) throw fbErr;
+
+        if (cleanImageUrl) {
+          saveStoredPartImage(id, cleanImageUrl);
+        } else if (cleanImageUrl === null && image_url !== undefined) {
+          removeStoredPartImage(id);
+        }
+
         return {
           success: true,
           data: {
             ...fbData,
-            part_number: fbData?.part_number || null,
-            image_url: fbData?.image_url || null,
+            part_number: fbData?.part_number || cleanPartNumber || null,
+            image_url: fbData?.image_url || cleanImageUrl || null,
           },
           isSchemaUpgradeNeeded: true,
           source: 'supabase',
@@ -331,12 +408,19 @@ export async function updatePart(id, { name, price, quantity, note = '', part_nu
       }
       throw error;
     }
+
+    if (cleanImageUrl) {
+      saveStoredPartImage(id, cleanImageUrl);
+    } else if (cleanImageUrl === null && image_url !== undefined) {
+      removeStoredPartImage(id);
+    }
+
     return {
       success: true,
       data: {
         ...data,
-        part_number: data?.part_number || null,
-        image_url: data?.image_url || null,
+        part_number: data?.part_number || cleanPartNumber || null,
+        image_url: data?.image_url || cleanImageUrl || null,
       },
       source: 'supabase',
     };
@@ -390,6 +474,7 @@ export async function deletePart(id) {
   }
 
   try {
+    removeStoredPartImage(id);
     const { error } = await supabase.from('parts').delete().eq('id', id);
     if (error) throw error;
     return { success: true, source: 'supabase' };
@@ -872,6 +957,58 @@ export async function cancelInvoice(invoiceId) {
 
     // Update invoice status to cancelled in Supabase
     await supabase.from('invoices').update({ invoice_status: 'cancelled' }).eq('id', invoiceId);
+    return { success: true, source: 'supabase' };
+  } catch (err) {
+    return { success: false, error: err.message, source: 'supabase' };
+  }
+}
+
+/**
+ * Permanently deletes an invoice from Supabase.
+ * If the invoice is still active (not cancelled), all deducted stock quantities are restored automatically.
+ */
+export async function deleteInvoice(invoiceId) {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return { success: false, error: 'Supabase client not connected' };
+  }
+
+  try {
+    // 1. Fetch invoice to restore stock if active
+    const { data: invoice } = await supabase
+      .from('invoices')
+      .select('*, items:invoice_items(*)')
+      .eq('id', invoiceId)
+      .single();
+
+    // 2. If invoice was confirmed (not already cancelled), restore stock
+    if (invoice && invoice.invoice_status !== 'cancelled' && invoice.items) {
+      for (const item of invoice.items) {
+        if (item.item_type === 'part' && item.part_id) {
+          const { data: part } = await supabase
+            .from('parts')
+            .select('quantity')
+            .eq('id', item.part_id)
+            .single();
+
+          if (part) {
+            const restoredQty = (part.quantity || 0) + (item.quantity || 0);
+            await supabase
+              .from('parts')
+              .update({ quantity: restoredQty, updated_at: new Date().toISOString() })
+              .eq('id', item.part_id);
+          }
+        }
+      }
+    }
+
+    // 3. Delete invoice line items first
+    await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);
+
+    // 4. Delete the parent invoice record
+    const { error: delErr } = await supabase.from('invoices').delete().eq('id', invoiceId);
+    if (delErr) throw delErr;
+
     return { success: true, source: 'supabase' };
   } catch (err) {
     return { success: false, error: err.message, source: 'supabase' };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
   Plus,
@@ -36,19 +36,23 @@ export default function StockView({
   const [quickStockPart, setQuickStockPart] = useState(null);
   const [viewImagePart, setViewImagePart] = useState(null);
 
-  // 1. First apply typo-tolerant fuzzy search across name, part_number, and note
-  const searchedParts = searchTerm
-    ? fuzzyFilter(parts, searchTerm, ['name', 'part_number', 'note'])
-    : parts;
+  // 1. First apply typo-tolerant fuzzy search across name, part_number, and note (memoized for fast search)
+  const searchedParts = useMemo(() => {
+    return searchTerm
+      ? fuzzyFilter(parts, searchTerm, ['name', 'part_number', 'note'])
+      : parts;
+  }, [parts, searchTerm]);
 
-  // 2. Filter parts by stock condition
-  const filteredParts = searchedParts.filter((part) => {
-    const qty = parseInt(part.quantity, 10) || 0;
-    if (filterType === 'instock') return qty > 3;
-    if (filterType === 'low') return qty > 0 && qty <= 3;
-    if (filterType === 'out') return qty <= 0;
-    return true;
-  });
+  // 2. Filter parts by stock condition (memoized)
+  const filteredParts = useMemo(() => {
+    return searchedParts.filter((part) => {
+      const qty = parseInt(part.quantity, 10) || 0;
+      if (filterType === 'instock') return qty > 3;
+      if (filterType === 'low') return qty > 0 && qty <= 3;
+      if (filterType === 'out') return qty <= 0;
+      return true;
+    });
+  }, [searchedParts, filterType]);
 
   const handleOpenAdd = () => {
     setEditingPart(null);
@@ -329,16 +333,26 @@ export default function StockView({
                       )}
                     </span>
 
-                    {/* View Image Button if part has image */}
-                    {part.image_url && (
+                    {/* View Image Button if part has image, or Add Photo shortcut */}
+                    {part.image_url ? (
                       <button
                         type="button"
                         onClick={() => setViewImagePart(part)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200/80 text-[11px] font-black cursor-pointer transition-all"
-                        title={lang === 'ml' ? 'ഫോട്ടോ കാണുക' : 'View photo'}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs text-xs font-black cursor-pointer transition-all"
+                        title={lang === 'ml' ? 'ഫോട്ടോ വലുതായി കാണുക' : 'View photo'}
                       >
-                        <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
-                        <span>{t.stock.viewImage || 'View Photo'}</span>
+                        <Eye className="w-3.5 h-3.5 text-white" />
+                        <span>{lang === 'ml' ? 'ഫോട്ടോ കാണുക' : 'View Photo'}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(part)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 border border-slate-200 text-[11px] font-bold cursor-pointer transition-all"
+                        title={lang === 'ml' ? 'ഫോട്ടോ ചേർക്കുക' : 'Add photo'}
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{lang === 'ml' ? '+ ഫോട്ടോ' : '+ Photo'}</span>
                       </button>
                     )}
                   </div>
