@@ -12,6 +12,9 @@ import {
   Hash,
   Image as ImageIcon,
   Eye,
+  Coins,
+  CheckCircle2,
+  TrendingUp,
 } from 'lucide-react';
 import PartModal from './PartModal';
 import AddStockQuickModal from './AddStockQuickModal';
@@ -35,6 +38,19 @@ export default function StockView({
   const [editingPart, setEditingPart] = useState(null);
   const [quickStockPart, setQuickStockPart] = useState(null);
   const [viewImagePart, setViewImagePart] = useState(null);
+
+  // Compute total stock units and total monetary worth
+  const totalStockUnits = useMemo(() => {
+    return parts.reduce((sum, p) => sum + (parseInt(p.quantity, 10) || 0), 0);
+  }, [parts]);
+
+  const totalStockWorth = useMemo(() => {
+    return parts.reduce((sum, p) => {
+      const qty = parseInt(p.quantity, 10) || 0;
+      const price = parseFloat(p.price) || 0;
+      return sum + (qty * price);
+    }, 0);
+  }, [parts]);
 
   // 1. First apply typo-tolerant fuzzy search across name, part_number, and note (memoized for fast search)
   const searchedParts = useMemo(() => {
@@ -126,7 +142,99 @@ export default function StockView({
         </button>
       </div>
 
-      {/* 2. SEARCH BAR & QUICK FILTERS */}
+      {/* 2. HERO INVENTORY VALUATION CARD (TOTAL STOCK WORTH) */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-4 sm:p-5 border border-slate-800 shadow-md">
+        {/* Glow Effects */}
+        <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
+        <div className="absolute -left-12 -bottom-12 w-40 h-40 rounded-full bg-blue-500/15 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          {/* Main Worth Display */}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-black uppercase tracking-wider">
+                <Coins className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />
+                <span>{t.stock.totalStockWorth}</span>
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium">
+                ({t.stock.holdingValue})
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight font-sans drop-shadow-xs">
+                ₹{totalStockWorth.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-slate-300 font-medium mt-0.5">
+              {lang === 'ml'
+                ? `കൈവശമുള്ള ${totalStockUnits.toLocaleString('en-IN')} യൂണിറ്റ് പാർട്സുകളുടെ ആകെ മൂല്യം`
+                : `Total valuation across ${totalStockUnits.toLocaleString('en-IN')} physical units currently on shelf`}
+            </p>
+          </div>
+
+          {/* Micro Metrics Row */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 flex-shrink-0">
+            {/* Units on shelf */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-1.5 border border-white/10">
+              <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
+                {t.stock.totalStockUnits}
+              </div>
+              <div className="text-base sm:text-lg font-black text-white flex items-center gap-1">
+                <Package className="w-4 h-4 text-blue-300" />
+                <span>{totalStockUnits.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            {/* Part Varieties */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-1.5 border border-white/10">
+              <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
+                {t.stock.partTypes}
+              </div>
+              <div className="text-base sm:text-lg font-black text-white flex items-center gap-1">
+                <Hash className="w-3.5 h-3.5 text-indigo-300" />
+                <span>{parts.length}</span>
+              </div>
+            </div>
+
+            {/* Health Status pill */}
+            <div className="col-span-2 sm:col-span-1 bg-white/10 backdrop-blur-md rounded-2xl px-3 py-1.5 border border-white/10 flex items-center justify-between sm:flex-col sm:items-start">
+              <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
+                {lang === 'ml' ? 'സ്റ്റോക്ക് നില' : 'Stock Status'}
+              </div>
+              {outCount === 0 && lowCount === 0 ? (
+                <div className="text-xs sm:text-sm font-black text-emerald-400 flex items-center gap-1 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{t.stock.healthyStock}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {outCount > 0 && (
+                    <button
+                      onClick={() => setFilterType('out')}
+                      className="text-[10px] font-black bg-red-500/30 text-red-300 hover:bg-red-500/50 px-2 py-0.5 rounded-lg border border-red-500/40 cursor-pointer active:scale-95 transition-all flex items-center gap-1"
+                    >
+                      <AlertTriangle className="w-3 h-3 text-red-400" />
+                      <span>{outCount} {lang === 'ml' ? 'തീർന്നു' : 'Out'}</span>
+                    </button>
+                  )}
+                  {lowCount > 0 && (
+                    <button
+                      onClick={() => setFilterType('low')}
+                      className="text-[10px] font-black bg-amber-500/30 text-amber-300 hover:bg-amber-500/50 px-2 py-0.5 rounded-lg border border-amber-500/40 cursor-pointer active:scale-95 transition-all flex items-center gap-1"
+                    >
+                      <AlertTriangle className="w-3 h-3 text-amber-400" />
+                      <span>{lowCount} {lang === 'ml' ? 'കുറവ്' : 'Low'}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. SEARCH BAR & QUICK FILTERS */}
       <div className="space-y-2">
         {/* Search Input with typo tolerance */}
         <div className="relative">
@@ -299,10 +407,16 @@ export default function StockView({
                     )}
                   </div>
 
-                  {/* Price */}
+                  {/* Price & Total Holding Worth */}
                   <div className="text-right flex-shrink-0">
-                    <div className="font-black text-slate-900 text-base sm:text-xl">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                      {lang === 'ml' ? 'ഒരു പീസ്' : 'Unit Price'}
+                    </div>
+                    <div className="font-black text-slate-900 text-base sm:text-lg leading-tight">
                       ₹{(parseFloat(part.price) || 0).toFixed(0)}
+                    </div>
+                    <div className="mt-1 inline-block px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[10px] font-black tracking-tight">
+                      {t.stock.itemWorth}: ₹{(qty * (parseFloat(part.price) || 0)).toLocaleString('en-IN')}
                     </div>
                   </div>
                 </div>

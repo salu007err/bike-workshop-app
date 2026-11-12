@@ -931,6 +931,54 @@ assert(stockAfterDel.quantity === 5, 'Deducted stock automatically restored to 5
 await db.deletePart(delTestPart.data.id);
 assert(db.getStoredPartImage(delTestPart.data.id) === null, 'Part image cleaned up from local store when part is deleted');
 
+console.log('\n--- TEST SUITE 21: Total Stock Worth Calculation & UI/UX Metrics ---');
+
+// Test A: Total Stock Worth & Units Calculation
+const sampleInventory = [
+  { id: 'p1', name: 'Engine Oil 20W40 1L', price: 450, quantity: 10 },
+  { id: 'p2', name: 'Brake Shoe Rear', price: 280, quantity: 5 },
+  { id: 'p3', name: 'Spark Plug NGK', price: 125, quantity: 8 },
+  { id: 'p4', name: 'Drive Chain 428H', price: 850, quantity: 2 },
+  { id: 'p5', name: 'Headlight Bulb 35W', price: 90, quantity: 0 }, // Out of stock
+];
+
+const computedUnits = sampleInventory.reduce((sum, p) => sum + (parseInt(p.quantity, 10) || 0), 0);
+assert(computedUnits === (10 + 5 + 8 + 2 + 0), `Total units computed correctly: ${computedUnits} == 25`);
+
+const computedWorth = sampleInventory.reduce((sum, p) => {
+  const qty = parseInt(p.quantity, 10) || 0;
+  const price = parseFloat(p.price) || 0;
+  return sum + (qty * price);
+}, 0);
+// Expected: (10*450) + (5*280) + (8*125) + (2*850) + (0*90) = 4500 + 1400 + 1000 + 1700 + 0 = 8600
+assert(computedWorth === 8600, `Total stock worth computed correctly: ₹${computedWorth} == ₹8,600`);
+
+// Test B: Per-item holding worth calculation
+const p1HoldingWorth = (parseInt(sampleInventory[0].quantity, 10) || 0) * (parseFloat(sampleInventory[0].price) || 0);
+assert(p1HoldingWorth === 4500, `Per-item holding worth: 10 * ₹450 = ₹${p1HoldingWorth}`);
+
+const p5HoldingWorth = (parseInt(sampleInventory[4].quantity, 10) || 0) * (parseFloat(sampleInventory[4].price) || 0);
+assert(p5HoldingWorth === 0, `Per-item holding worth for 0 qty is ₹0: ₹${p5HoldingWorth}`);
+
+// Test C: Currency formatting helper
+const formattedWorth = `₹${computedWorth.toLocaleString('en-IN')}`;
+assert(formattedWorth === '₹8,600', `Indian currency formatting formatted correctly: ${formattedWorth}`);
+
+// Test D: Translation keys presence in both English and Malayalam
+const enTrans = trans.translations.en;
+const mlTrans = trans.translations.ml;
+
+assert(typeof enTrans.stock.totalStockWorth === 'string' && enTrans.stock.totalStockWorth.length > 0, 'EN stock.totalStockWorth exists');
+assert(typeof mlTrans.stock.totalStockWorth === 'string' && mlTrans.stock.totalStockWorth.length > 0, 'ML stock.totalStockWorth exists');
+assert(typeof enTrans.stock.totalStockUnits === 'string', 'EN stock.totalStockUnits exists');
+assert(typeof mlTrans.stock.totalStockUnits === 'string', 'ML stock.totalStockUnits exists');
+assert(typeof enTrans.stock.holdingValue === 'string', 'EN stock.holdingValue exists');
+assert(typeof mlTrans.stock.holdingValue === 'string', 'ML stock.holdingValue exists');
+assert(typeof enTrans.stock.itemWorth === 'string', 'EN stock.itemWorth exists');
+assert(typeof mlTrans.stock.itemWorth === 'string', 'ML stock.itemWorth exists');
+assert(typeof enTrans.home.stockWorth === 'string', 'EN home.stockWorth exists');
+assert(typeof mlTrans.home.stockWorth === 'string', 'ML home.stockWorth exists');
+
 console.log('\n=======================================');
 console.log(`TOTAL TESTS: ${testsPassed + testsFailed}`);
 console.log(`PASSED: ${testsPassed}`);

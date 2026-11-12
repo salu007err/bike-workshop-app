@@ -9,6 +9,7 @@ import {
   Clock,
   Sparkles,
   Gauge,
+  Coins,
 } from 'lucide-react';
 import { formatDate } from '../services/invoiceService';
 
@@ -23,6 +24,13 @@ export default function HomeView({
 }) {
   // Compute key workshop metrics
   const totalPartsCount = parts.length;
+  const totalStockUnits = parts.reduce((sum, p) => sum + (parseInt(p.quantity, 10) || 0), 0);
+  const totalStockWorth = parts.reduce((sum, p) => {
+    const qty = parseInt(p.quantity, 10) || 0;
+    const price = parseFloat(p.price) || 0;
+    return sum + (qty * price);
+  }, 0);
+
   const lowStockParts = parts.filter((p) => {
     const qty = parseInt(p.quantity, 10) || 0;
     return qty > 0 && qty <= 3;
@@ -32,16 +40,35 @@ export default function HomeView({
 
   return (
     <div className="max-w-4xl mx-auto px-3.5 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      {/* 1. QUICK STATS SUMMARY CHIPS (MOBILE OPTIMIZED) */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {/* Total Stock */}
+      {/* 1. QUICK STATS SUMMARY CHIPS (MOBILE OPTIMIZED 4-CARD GRID) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        {/* Total Stock Worth (Hero Financial Metric) */}
+        <button
+          onClick={() => onSelectSection('stock')}
+          className="bg-gradient-to-br from-emerald-500/10 via-white to-white p-3 rounded-2xl border border-emerald-200/90 shadow-xs hover:border-emerald-400 hover:shadow-sm transition-all text-left cursor-pointer active:scale-98"
+        >
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-[11px] sm:text-xs font-black uppercase tracking-tight text-emerald-800 truncate">
+              {t.home.stockWorth || (lang === 'ml' ? 'സ്റ്റോക്ക് മൂല്യം' : 'Stock Worth')}
+            </span>
+            <Coins className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-emerald-700 leading-tight">
+            ₹{totalStockWorth.toLocaleString('en-IN')}
+          </div>
+          <div className="text-[10px] text-emerald-800 font-semibold truncate mt-0.5">
+            {totalStockUnits.toLocaleString('en-IN')} {lang === 'ml' ? 'യൂണിറ്റ് സ്റ്റോക്ക്' : 'units in stock'}
+          </div>
+        </button>
+
+        {/* Total Part Types */}
         <button
           onClick={() => onSelectSection('stock')}
           className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-300 transition-all text-left cursor-pointer active:scale-98"
         >
           <div className="flex items-center justify-between text-slate-500 mb-1">
             <span className="text-[11px] sm:text-xs font-bold uppercase tracking-tight text-slate-500 truncate">
-              {lang === 'ml' ? 'സ്റ്റോക്ക്' : 'Parts'}
+              {lang === 'ml' ? 'പാർട്സുകൾ' : 'Part Types'}
             </span>
             <Package className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
           </div>
@@ -49,7 +76,7 @@ export default function HomeView({
             {totalPartsCount}
           </div>
           <div className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-            {lang === 'ml' ? 'ലഭ്യമായ പാർട്സുകൾ' : 'Items in stock'}
+            {lang === 'ml' ? 'ലഭ്യമായ ഇനങ്ങൾ' : 'Items listed'}
           </div>
         </button>
 
@@ -113,8 +140,10 @@ export default function HomeView({
               <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
                 <Package className="w-6 h-6 text-white stroke-[2.5]" />
               </div>
-              <span className="text-[10px] uppercase font-black tracking-widest bg-blue-400/30 text-blue-100 px-2.5 py-1 rounded-full border border-blue-300/30">
-                {totalPartsCount} {lang === 'ml' ? 'പാർട്സ്' : 'Parts'}
+              <span className="text-[10px] uppercase font-black tracking-widest bg-blue-400/30 text-blue-100 px-2.5 py-1 rounded-full border border-blue-300/30 flex items-center gap-1">
+                <span>{totalPartsCount} {lang === 'ml' ? 'പാർട്സ്' : 'Parts'}</span>
+                <span>•</span>
+                <span className="text-emerald-300 font-extrabold">₹{totalStockWorth.toLocaleString('en-IN')}</span>
               </span>
             </div>
 
