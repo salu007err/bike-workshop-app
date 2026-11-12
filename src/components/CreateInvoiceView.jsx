@@ -19,13 +19,14 @@ import {
   Edit2,
   Info,
   Gauge,
+  Eye,
+  Sparkles,
 } from 'lucide-react';
 import { fuzzyFilter } from '../services/searchUtils';
 import { searchCommonBikeParts } from '../services/commonBikeParts';
 import { searchBikeModels, QUICK_POPULAR_MODELS } from '../services/commonBikeModels';
 import { COMMON_WORKSHOP_SERVICES } from '../services/commonServices';
 import ImageViewModal from './ImageViewModal';
-import { Eye } from 'lucide-react';
 
 export default function CreateInvoiceView({
   parts,
@@ -667,32 +668,32 @@ export default function CreateInvoiceView({
           </h3>
         </div>
 
-        {/* 3 Master Segment Buttons */}
+        {/* 3 Master Segment Buttons: 1) Spare Parts, 2) Work/Labour, 3) Outside Part */}
         <div className="grid grid-cols-3 gap-2 bg-slate-100 p-2 rounded-2xl">
-          <button
-            type="button"
-            onClick={() => setItemTypeTab('work')}
-            className={`py-3 px-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              itemTypeTab === 'work'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-700 hover:text-slate-900'
-            }`}
-          >
-            <Wrench className="w-4 h-4 stroke-[2.5]" />
-            <span className="truncate">{lang === 'ml' ? 'പണിക്കൂലി' : 'Labour'}</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setItemTypeTab('stock')}
             className={`py-3 px-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               itemTypeTab === 'stock'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-700 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 bg-white/70'
             }`}
           >
             <Package className="w-4 h-4 stroke-[2.5]" />
-            <span className="truncate">{lang === 'ml' ? 'കടയിലെ പാർട്ട്' : 'Shop Part'}</span>
+            <span className="truncate">{lang === 'ml' ? 'സ്പെയർ പാർട്സ്' : 'Spare Parts'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setItemTypeTab('work')}
+            className={`py-3 px-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              itemTypeTab === 'work'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-700 hover:text-slate-900 bg-white/70'
+            }`}
+          >
+            <Wrench className="w-4 h-4 stroke-[2.5]" />
+            <span className="truncate">{lang === 'ml' ? 'പണിക്കൂലി' : 'Work / Labour'}</span>
           </button>
 
           <button
@@ -701,7 +702,7 @@ export default function CreateInvoiceView({
             className={`py-3 px-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               itemTypeTab === 'outside'
                 ? 'bg-purple-600 text-white shadow-md'
-                : 'text-slate-700 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 bg-white/70'
             }`}
           >
             <ShoppingCart className="w-4 h-4 stroke-[2.5]" />

@@ -1,4 +1,5 @@
 // Automated verification script for Bike Workshop App logic (Bilingual, Pure Supabase, and Free AI Agent)
+import fs from 'fs';
 import { jsPDF } from 'jspdf';
 
 // Mock localStorage for node environment
@@ -1020,6 +1021,40 @@ const testQuery = 'kl07';
 const normalizedV = searchUtils.normalizeSearchText(testVNum).replace(/\s+/g, '');
 const normalizedQ = searchUtils.normalizeSearchText(testQuery).replace(/\s+/g, '');
 assert(normalizedV.includes(normalizedQ), 'Spaceless search query matches vehicle registration number');
+
+console.log('\n--- TEST SUITE 23: Parts & Stock First, Work & Spares Tabs, and Blank Screen Prevention ---');
+
+// Test A: CreateInvoiceView JSX imports verification (No missing JSX tags)
+const createInvoiceCode = fs.readFileSync('src/components/CreateInvoiceView.jsx', 'utf8');
+const createInvoiceTags = [...new Set([...createInvoiceCode.matchAll(/<([A-Z][A-Za-z0-9_]*)/g)].map(m => m[1]))];
+const createInvoiceImports = [...createInvoiceCode.matchAll(/import\s+(?:\{([^}]+)\}|([A-Za-z0-9_]+))\s+from/g)].flatMap(m => {
+  if (m[1]) return m[1].split(',').map(s => s.trim().split(/\s+as\s+/).pop());
+  if (m[2]) return [m[2].trim()];
+  return [];
+});
+const missingInvoiceTags = createInvoiceTags.filter(t => !createInvoiceImports.includes(t) && t !== 'React');
+assert(missingInvoiceTags.length === 0, 'CreateInvoiceView has 0 missing JSX component imports (Sparkles included)');
+assert(createInvoiceImports.includes('Sparkles'), 'Sparkles icon is explicitly imported in CreateInvoiceView');
+
+// Test B: Tab order verification in Step 2: Spare Parts First, then Work, then Outside
+const stockTabIdx = createInvoiceCode.indexOf("setItemTypeTab('stock')");
+const workTabIdx = createInvoiceCode.indexOf("setItemTypeTab('work')");
+const outsideTabIdx = createInvoiceCode.indexOf("setItemTypeTab('outside')");
+assert(stockTabIdx !== -1 && workTabIdx !== -1 && outsideTabIdx !== -1, 'All 3 tabs (stock, work, outside) exist in CreateInvoiceView');
+assert(stockTabIdx < workTabIdx, "Spare Parts tab ('stock') appears before Work/Labour tab ('work')");
+assert(workTabIdx < outsideTabIdx, "Work/Labour tab ('work') appears before Outside Part tab ('outside')");
+
+// Test C: HomeView layout: Parts & Stock before Make New Bill
+const homeCode = fs.readFileSync('src/components/HomeView.jsx', 'utf8');
+const stockBtnIdx = homeCode.indexOf("onSelectSection('stock')");
+const invoiceBtnIdx = homeCode.indexOf("onSelectSection('invoice')");
+assert(stockBtnIdx !== -1 && invoiceBtnIdx !== -1, 'Both Stock and Invoice action buttons exist in HomeView');
+assert(stockBtnIdx < invoiceBtnIdx, 'Parts & Stock master button appears FIRST before New Bill button in HomeView');
+
+// Test D: ErrorBoundary exists and is integrated into App.jsx
+assert(fs.existsSync('src/components/ErrorBoundary.jsx'), 'ErrorBoundary component exists');
+const appCode = fs.readFileSync('src/App.jsx', 'utf8');
+assert(appCode.includes('<ErrorBoundary>') && appCode.includes('</ErrorBoundary>'), 'App.jsx wraps main content with ErrorBoundary to prevent blank screens');
 
 console.log('\n=======================================');
 console.log(`TOTAL TESTS: ${testsPassed + testsFailed}`);

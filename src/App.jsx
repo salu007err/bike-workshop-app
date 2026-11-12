@@ -8,6 +8,7 @@ import InvoiceHistoryView from './components/InvoiceHistoryView';
 import InvoiceDetailModal from './components/InvoiceDetailModal';
 import SettingsModal from './components/SettingsModal';
 import AIAssistantModal from './components/AIAssistantModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
 import {
   fetchParts,
@@ -375,64 +376,66 @@ export default function App() {
       )}
 
       {/* 4. MAIN CONTENT */}
-      <main className="flex-1 pb-24 sm:pb-20">
-        {currentSection === 'home' && (
-          <HomeView
-            onSelectSection={(sec) => setCurrentSection(sec)}
-            parts={parts}
-            invoices={invoices}
-            onSelectInvoice={(inv) => setActiveInvoice(inv)}
-            t={t}
-            lang={lang}
-          />
-        )}
+      <ErrorBoundary>
+        <main className="flex-1 pb-24 sm:pb-20">
+          {currentSection === 'home' && (
+            <HomeView
+              onSelectSection={(sec) => setCurrentSection(sec)}
+              parts={parts}
+              invoices={invoices}
+              onSelectInvoice={(inv) => setActiveInvoice(inv)}
+              t={t}
+              lang={lang}
+            />
+          )}
 
-        {currentSection === 'stock' && (
-          <StockView
-            parts={parts}
-            isLoading={isLoadingParts}
-            onBack={() => setCurrentSection('home')}
-            onAddPart={handleAddPart}
-            onUpdatePart={handleUpdatePart}
-            onDeletePart={handleDeletePart}
-            onAddStock={handleAddStock}
-            t={t}
-            lang={lang}
-          />
-        )}
+          {currentSection === 'stock' && (
+            <StockView
+              parts={parts}
+              isLoading={isLoadingParts}
+              onBack={() => setCurrentSection('home')}
+              onAddPart={handleAddPart}
+              onUpdatePart={handleUpdatePart}
+              onDeletePart={handleDeletePart}
+              onAddStock={handleAddStock}
+              t={t}
+              lang={lang}
+            />
+          )}
 
-        {currentSection === 'invoice' && (
-          <CreateInvoiceView
-            parts={parts}
-            onBack={() => {
-              setEditingInvoice(null);
-              setCurrentSection('home');
-            }}
-            onCreateInvoice={handleCreateInvoice}
-            onUpdateInvoice={handleUpdateInvoice}
-            editingInvoice={editingInvoice}
-            onCancelEdit={handleCancelEditInvoice}
-            onViewHistory={() => setCurrentSection('history')}
-            isCreating={isCreatingInvoice}
-            t={t}
-            lang={lang}
-          />
-        )}
+          {currentSection === 'invoice' && (
+            <CreateInvoiceView
+              parts={parts}
+              onBack={() => {
+                setEditingInvoice(null);
+                setCurrentSection('home');
+              }}
+              onCreateInvoice={handleCreateInvoice}
+              onUpdateInvoice={handleUpdateInvoice}
+              editingInvoice={editingInvoice}
+              onCancelEdit={handleCancelEditInvoice}
+              onViewHistory={() => setCurrentSection('history')}
+              isCreating={isCreatingInvoice}
+              t={t}
+              lang={lang}
+            />
+          )}
 
-        {currentSection === 'history' && (
-          <InvoiceHistoryView
-            invoices={invoices}
-            isLoading={isLoadingInvoices}
-            onBack={() => setCurrentSection('invoice')}
-            onSelectInvoice={(inv) => setActiveInvoice(inv)}
-            onCancelInvoice={handleCancelInvoice}
-            onEditInvoice={handleStartEditInvoice}
-            onDeleteInvoice={handleDeleteInvoice}
-            t={t}
-            lang={lang}
-          />
-        )}
-      </main>
+          {currentSection === 'history' && (
+            <InvoiceHistoryView
+              invoices={invoices}
+              isLoading={isLoadingInvoices}
+              onBack={() => setCurrentSection('invoice')}
+              onSelectInvoice={(inv) => setActiveInvoice(inv)}
+              onCancelInvoice={handleCancelInvoice}
+              onEditInvoice={handleStartEditInvoice}
+              onDeleteInvoice={handleDeleteInvoice}
+              t={t}
+              lang={lang}
+            />
+          )}
+        </main>
+      </ErrorBoundary>
 
       {/* 5. MOBILE BOTTOM NAVIGATION */}
       <BottomNav

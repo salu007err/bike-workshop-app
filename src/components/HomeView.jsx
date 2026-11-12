@@ -128,9 +128,46 @@ export default function HomeView({
         </div>
       </div>
 
-      {/* 2. THE 2 MASTER ACTION HUBS (GIANT TACTILE CARDS) */}
+      {/* 2. THE 2 MASTER ACTION HUBS (PARTS & STOCK FIRST, THEN BILL) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* BUTTON 1: MAKE NEW BILL (VIBRANT EMERALD) */}
+        {/* BUTTON 1: STOCK MANAGEMENT (ROYAL BLUE) - FIRST */}
+        <div
+          onClick={() => onSelectSection('stock')}
+          className="group relative bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-3xl p-6 shadow-xl shadow-blue-600/25 active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between overflow-hidden border-2 border-blue-400"
+        >
+          <div className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                <Package className="w-9 h-9 text-white stroke-[2.5]" />
+              </div>
+              <span className="text-xs uppercase font-black tracking-wider bg-white/25 text-white px-3.5 py-1.5 rounded-full border border-white/30 flex items-center gap-1.5 shadow-2xs">
+                <span>{totalPartsCount} {lang === 'ml' ? 'പാർട്സുകൾ' : 'Items'}</span>
+              </span>
+            </div>
+
+            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 leading-tight">
+              {lang === 'ml' ? 'പാർട്സ് സ്റ്റോക്ക്' : 'Parts & Stock'}
+            </h3>
+            <p className="text-blue-100 text-sm sm:text-base font-semibold leading-relaxed">
+              {lang === 'ml'
+                ? 'സ്പെയർ പാർട്സുകൾ, വില, ഫോട്ടോ, സ്റ്റോക്ക് അളവ് എന്നിവ കാണാനും മാറ്റാനും'
+                : 'Check available parts, prices, photos & add received stock'}
+            </p>
+          </div>
+
+          <div className="mt-6 pt-4 border-t-2 border-white/20 flex items-center justify-between">
+            <span className="font-black text-lg text-white flex items-center gap-2">
+              <span>{lang === 'ml' ? 'സ്റ്റോക്ക് തുറക്കുക' : 'Open Stock Now'}</span>
+            </span>
+            <div className="w-11 h-11 rounded-full bg-white text-blue-700 flex items-center justify-center shadow-md group-hover:translate-x-2 transition-transform">
+              <ArrowRight className="w-6 h-6 stroke-[3]" />
+            </div>
+          </div>
+        </div>
+
+        {/* BUTTON 2: MAKE NEW BILL (VIBRANT EMERALD) - SECOND */}
         <div
           onClick={() => onSelectSection('invoice')}
           className="group relative bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-3xl p-6 shadow-xl shadow-emerald-600/25 active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between overflow-hidden border-2 border-emerald-400"
@@ -163,43 +200,6 @@ export default function HomeView({
               <span>{lang === 'ml' ? 'ബിൽ തുടങ്ങുക' : 'Start Bill Now'}</span>
             </span>
             <div className="w-11 h-11 rounded-full bg-white text-emerald-700 flex items-center justify-center shadow-md group-hover:translate-x-2 transition-transform">
-              <ArrowRight className="w-6 h-6 stroke-[3]" />
-            </div>
-          </div>
-        </div>
-
-        {/* BUTTON 2: STOCK MANAGEMENT (ROYAL BLUE) */}
-        <div
-          onClick={() => onSelectSection('stock')}
-          className="group relative bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-3xl p-6 shadow-xl shadow-blue-600/25 active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between overflow-hidden border-2 border-blue-400"
-        >
-          <div className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
-
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                <Package className="w-9 h-9 text-white stroke-[2.5]" />
-              </div>
-              <span className="text-xs uppercase font-black tracking-wider bg-white/25 text-white px-3.5 py-1.5 rounded-full border border-white/30 flex items-center gap-1.5 shadow-2xs">
-                <span>{totalPartsCount} {lang === 'ml' ? 'പാർട്സുകൾ' : 'Items'}</span>
-              </span>
-            </div>
-
-            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 leading-tight">
-              {lang === 'ml' ? 'പാർട്സ് സ്റ്റോക്ക്' : 'Parts & Stock'}
-            </h3>
-            <p className="text-blue-100 text-sm sm:text-base font-semibold leading-relaxed">
-              {lang === 'ml'
-                ? 'സ്പെയർ പാർട്സുകൾ, വില, ഫോട്ടോ, സ്റ്റോക്ക് അളവ് എന്നിവ കാണാനും മാറ്റാനും'
-                : 'Check available parts, prices, photos & add received stock'}
-            </p>
-          </div>
-
-          <div className="mt-6 pt-4 border-t-2 border-white/20 flex items-center justify-between">
-            <span className="font-black text-lg text-white flex items-center gap-2">
-              <span>{lang === 'ml' ? 'സ്റ്റോക്ക് തുറക്കുക' : 'Open Stock Now'}</span>
-            </span>
-            <div className="w-11 h-11 rounded-full bg-white text-blue-700 flex items-center justify-center shadow-md group-hover:translate-x-2 transition-transform">
               <ArrowRight className="w-6 h-6 stroke-[3]" />
             </div>
           </div>
