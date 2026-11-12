@@ -69,28 +69,27 @@ export default function HomeView({
 
   return (
     <div className="max-w-4xl mx-auto px-3.5 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 select-none">
-      {/* 1. HERO INVENTORY VALUATION CARD (BRIGHT, MODERN & CLEAR) */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-5 sm:p-7 border-2 border-slate-800 shadow-xl">
-        {/* Decorative soft glow */}
-        <div className="absolute -right-12 -top-12 w-52 h-52 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
-        <div className="absolute -left-12 -bottom-12 w-48 h-48 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
+      {/* 1. HERO INVENTORY VALUATION CARD (LIGHT & MODERN) */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-blue-50 p-5 sm:p-7 border-2 border-emerald-200 shadow-sm">
+        <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-emerald-100/60 blur-2xl pointer-events-none" />
+        <div className="absolute -left-10 -bottom-10 w-40 h-40 rounded-full bg-blue-100/60 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 text-xs font-black uppercase tracking-wider">
-                <Coins className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black uppercase tracking-wider">
+                <Coins className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
                 <span>{t.home.stockWorth || (lang === 'ml' ? 'സ്റ്റോക്ക് മൂല്യം' : 'Total Stock Worth')}</span>
               </span>
             </div>
 
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl sm:text-5xl font-black text-emerald-400 tracking-tight font-sans drop-shadow-sm">
+              <span className="text-4xl sm:text-5xl font-black text-emerald-700 tracking-tight font-sans">
                 ₹{totalStockWorth.toLocaleString('en-IN')}
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 font-semibold mt-1.5">
+            <p className="text-xs sm:text-sm text-slate-600 font-semibold mt-1.5">
               {lang === 'ml'
                 ? `കടയിൽ ആകെ ${totalStockUnits.toLocaleString('en-IN')} യൂണിറ്റ് പാർട്സുകൾ നിലവിലുണ്ട്`
                 : `Total valuation of ${totalStockUnits.toLocaleString('en-IN')} spare parts on shelf`}
@@ -98,29 +97,29 @@ export default function HomeView({
           </div>
 
           {/* Quick Metrics Badges */}
-          <div className="flex items-center gap-2.5 pt-3 sm:pt-0 border-t sm:border-t-0 border-white/10 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2.5 pt-3 sm:pt-0 border-t sm:border-t-0 border-emerald-200 flex-shrink-0 flex-wrap">
             <button
               onClick={() => onSelectSection('stock')}
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/15 text-left transition-all active:scale-95 cursor-pointer shadow-sm"
+              className="bg-white hover:bg-blue-50 rounded-2xl px-4 py-2.5 border-2 border-blue-200 hover:border-blue-400 text-left transition-all active:scale-95 cursor-pointer shadow-sm"
             >
-              <div className="text-[11px] uppercase font-bold text-slate-300 tracking-wider">
+              <div className="text-[11px] uppercase font-bold text-slate-500 tracking-wider">
                 {lang === 'ml' ? 'പാർട്സുകൾ' : 'Part Types'}
               </div>
-              <div className="text-xl font-black text-white flex items-center gap-1.5 mt-0.5">
-                <Package className="w-4 h-4 text-blue-300 stroke-[2.5]" />
+              <div className="text-xl font-black text-slate-900 flex items-center gap-1.5 mt-0.5">
+                <Package className="w-4 h-4 text-blue-600 stroke-[2.5]" />
                 <span>{totalPartsCount}</span>
               </div>
             </button>
 
             <button
               onClick={() => onSelectSection('history')}
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/15 text-left transition-all active:scale-95 cursor-pointer shadow-sm"
+              className="bg-white hover:bg-emerald-50 rounded-2xl px-4 py-2.5 border-2 border-emerald-200 hover:border-emerald-400 text-left transition-all active:scale-95 cursor-pointer shadow-sm"
             >
-              <div className="text-[11px] uppercase font-bold text-slate-300 tracking-wider">
+              <div className="text-[11px] uppercase font-bold text-slate-500 tracking-wider">
                 {lang === 'ml' ? 'ബില്ലുകൾ' : 'Bills'}
               </div>
-              <div className="text-xl font-black text-white flex items-center gap-1.5 mt-0.5">
-                <FileText className="w-4 h-4 text-emerald-300 stroke-[2.5]" />
+              <div className="text-xl font-black text-slate-900 flex items-center gap-1.5 mt-0.5">
+                <FileText className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
                 <span>{invoices.length}</span>
               </div>
             </button>
@@ -349,7 +348,7 @@ export default function HomeView({
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-black text-slate-900 text-base sm:text-lg tracking-wide">
+                    <span className="font-mono font-black text-slate-900 text-base sm:text-lg tracking-wider bg-amber-50 px-2.5 py-0.5 rounded-lg border-2 border-amber-300">
                       {(inv.vehicle_number || '').toUpperCase()}
                     </span>
                     {inv.vehicle_model && (

@@ -15,52 +15,68 @@ export default function BottomNav({
   const isInvoice = currentSection === 'invoice';
   const isHistory = currentSection === 'history';
 
+  const TabBtn = ({ active, onClick, icon, label, badge, color = 'blue' }) => {
+    const colorMap = {
+      blue: 'text-blue-600 bg-blue-50',
+      emerald: 'text-emerald-600 bg-emerald-50',
+      indigo: 'text-indigo-600 bg-indigo-50',
+    };
+    return (
+      <button
+        onClick={onClick}
+        className={`relative flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl transition-all cursor-pointer min-w-[52px] ${
+          active ? colorMap[color] + ' font-black' : 'text-slate-400 font-bold'
+        }`}
+        aria-label={label}
+      >
+        <div className="relative">
+          {icon}
+          {badge > 0 && (
+            <span className="absolute -top-1.5 -right-2 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[16px] text-center leading-none shadow-xs">
+              {badge}
+            </span>
+          )}
+        </div>
+        <span className={`text-[11px] mt-0.5 leading-tight tracking-tight ${active ? '' : 'text-slate-400'}`}>
+          {label}
+        </span>
+        {active && (
+          <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-1 rounded-full ${color === 'blue' ? 'bg-blue-600' : color === 'emerald' ? 'bg-emerald-600' : 'bg-indigo-600'}`} />
+        )}
+      </button>
+    );
+  };
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t-2 border-slate-200 px-2 py-2 safe-pb shadow-[0_-4px_25px_rgba(0,0,0,0.08)] no-print">
-      <div className="max-w-md mx-auto grid grid-cols-5 items-center justify-around">
-        {/* 1. HOME TAB */}
-        <button
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/97 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 safe-pb shadow-[0_-4px_20px_rgba(0,0,0,0.07)] no-print">
+      <div className="max-w-md mx-auto grid grid-cols-5 items-center justify-around gap-0.5">
+        {/* HOME */}
+        <TabBtn
+          active={isHome}
           onClick={() => onSelectSection('home')}
-          className={`flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all cursor-pointer ${
-            isHome ? 'text-blue-700 font-black' : 'text-slate-500 hover:text-slate-800 font-bold'
-          }`}
-          aria-label="Home"
-        >
-          <Home className={`w-6 h-6 transition-transform ${isHome ? 'scale-110 text-blue-600 stroke-[2.8]' : 'stroke-[2]'}`} />
-          <span className="text-[11px] mt-0.5 leading-tight tracking-tight">
-            {lang === 'ml' ? 'ഹോം' : 'Home'}
-          </span>
-        </button>
+          icon={<Home className={`w-6 h-6 transition-transform ${isHome ? 'scale-110 stroke-[2.8]' : 'stroke-[2]'}`} />}
+          label={lang === 'ml' ? 'ഹോം' : 'Home'}
+          color="blue"
+        />
 
-        {/* 2. STOCK TAB */}
-        <button
+        {/* STOCK */}
+        <TabBtn
+          active={isStock}
           onClick={() => onSelectSection('stock')}
-          className={`relative flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all cursor-pointer ${
-            isStock ? 'text-blue-700 font-black' : 'text-slate-500 hover:text-slate-800 font-bold'
-          }`}
-          aria-label="Stock"
-        >
-          <div className="relative">
-            <Package className={`w-6 h-6 transition-transform ${isStock ? 'scale-110 text-blue-600 stroke-[2.8]' : 'stroke-[2]'}`} />
-            {partsCount > 0 && (
-              <span className="absolute -top-1 -right-2.5 bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-[16px] text-center leading-tight shadow-xs">
-                {partsCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[11px] mt-0.5 leading-tight tracking-tight">
-            {lang === 'ml' ? 'സ്റ്റോക്ക്' : 'Stock'}
-          </span>
-        </button>
+          icon={<Package className={`w-6 h-6 transition-transform ${isStock ? 'scale-110 stroke-[2.8]' : 'stroke-[2]'}`} />}
+          label={lang === 'ml' ? 'സ്റ്റോക്ക്' : 'Stock'}
+          badge={partsCount}
+          color="blue"
+        />
 
-        {/* 3. NEW BILL (CENTER HIGHLIGHTED TAB) */}
+        {/* CENTER: NEW BILL */}
         <button
           onClick={() => onSelectSection('invoice')}
-          className="flex flex-col items-center justify-center -mt-4 group cursor-pointer"
+          className="flex flex-col items-center justify-center -mt-5 group cursor-pointer"
           aria-label="Create Invoice"
         >
           <div
-            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all transform active:scale-95 ${
+            className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all transform active:scale-95 ${
               isInvoice
                 ? 'bg-emerald-600 text-white shadow-emerald-500/40 ring-4 ring-emerald-200 scale-105'
                 : 'bg-emerald-600 text-white shadow-emerald-600/35 hover:bg-emerald-500'
@@ -69,47 +85,36 @@ export default function BottomNav({
             <PlusCircle className="w-8 h-8 stroke-[2.5]" />
           </div>
           <span
-            className={`text-xs mt-0.5 font-black tracking-tight leading-tight ${
-              isInvoice ? 'text-emerald-700' : 'text-slate-700'
+            className={`text-xs mt-1 font-black tracking-tight leading-tight ${
+              isInvoice ? 'text-emerald-700' : 'text-slate-600'
             }`}
           >
             {lang === 'ml' ? '+ ബിൽ' : '+ Bill'}
           </span>
         </button>
 
-        {/* 4. HISTORY TAB */}
-        <button
+        {/* HISTORY */}
+        <TabBtn
+          active={isHistory}
           onClick={() => onSelectSection('history')}
-          className={`relative flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all cursor-pointer ${
-            isHistory ? 'text-blue-700 font-black' : 'text-slate-500 hover:text-slate-800 font-bold'
-          }`}
-          aria-label="Past Bills"
-        >
-          <div className="relative">
-            <History className={`w-6 h-6 transition-transform ${isHistory ? 'scale-110 text-blue-600 stroke-[2.8]' : 'stroke-[2]'}`} />
-            {invoicesCount > 0 && (
-              <span className="absolute -top-1 -right-2.5 bg-slate-200 text-slate-800 text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-[16px] text-center leading-tight">
-                {invoicesCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[11px] mt-0.5 leading-tight tracking-tight">
-            {lang === 'ml' ? 'ബില്ലുകൾ' : 'Bills'}
-          </span>
-        </button>
+          icon={<History className={`w-6 h-6 transition-transform ${isHistory ? 'scale-110 stroke-[2.8]' : 'stroke-[2]'}`} />}
+          label={lang === 'ml' ? 'ബില്ലുകൾ' : 'Bills'}
+          badge={invoicesCount > 0 ? invoicesCount : 0}
+          color="blue"
+        />
 
-        {/* 5. AI HELP TAB */}
+        {/* AI HELP */}
         <button
           onClick={onOpenAIAssistant}
-          className="flex flex-col items-center justify-center py-1 px-1 rounded-2xl text-indigo-600 hover:text-indigo-800 transition-all cursor-pointer active:scale-95"
+          className="relative flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl text-indigo-600 transition-all cursor-pointer active:scale-95 min-w-[52px]"
           aria-label="AI Help"
         >
           <div className="relative">
-            <Bot className="w-6 h-6 text-indigo-600 stroke-[2.4]" />
-            <Sparkles className="w-3 h-3 text-amber-500 absolute -top-0.5 -right-1 animate-pulse" />
+            <Bot className="w-6 h-6 text-indigo-500 stroke-[2.4]" />
+            <Sparkles className="w-3 h-3 text-amber-500 absolute -top-1 -right-1.5 animate-pulse" />
           </div>
           <span className="text-[11px] mt-0.5 font-black tracking-tight text-indigo-600 leading-tight">
-            {lang === 'ml' ? 'AI സഹായം' : 'AI Help'}
+            {lang === 'ml' ? 'AI' : 'AI Help'}
           </span>
         </button>
       </div>

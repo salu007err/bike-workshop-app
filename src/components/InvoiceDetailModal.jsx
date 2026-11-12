@@ -95,16 +95,16 @@ export default function InvoiceDetailModal({
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-150">
         {/* 1. MODAL TOP BAR */}
-        <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between no-print flex-shrink-0">
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-3 flex items-center justify-between no-print flex-shrink-0">
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-sm font-bold">
+            <FileText className="w-5 h-5 text-white" />
+            <h3 className="text-base font-black">
               {t.invoiceDetail.invoiceNo}: #{invoice.invoice_number}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-xl text-slate-400 hover:text-white"
+            className="p-1.5 rounded-xl text-white/70 hover:text-white hover:bg-white/20"
             aria-label="Close"
           >
             <X className="w-5 h-5" />

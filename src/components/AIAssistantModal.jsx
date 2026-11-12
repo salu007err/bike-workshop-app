@@ -142,20 +142,20 @@ export default function AIAssistantModal({
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
       <div className="bg-white w-full sm:max-w-xl sm:rounded-3xl rounded-t-3xl shadow-2xl border border-slate-200 flex flex-col h-[88vh] sm:h-[620px] overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         {/* Top Header */}
-        <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between border-b border-slate-800 flex-shrink-0">
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-md">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shadow-md">
               <Bot className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-sm sm:text-base text-white">{t.aiAgent.title}</h3>
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white border border-white/30">
                   <Sparkles className="w-2.5 h-2.5" />
                   <span>Gemini AI</span>
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">
+              <p className="text-[10px] text-indigo-200 font-medium">
                 {parts.length} {t.aiAgent.partsCount} • {invoices.length} {t.aiAgent.invoicesCount}
               </p>
             </div>
@@ -164,14 +164,14 @@ export default function AIAssistantModal({
           <div className="flex items-center gap-1">
             <button
               onClick={handleClearChat}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20"
               title="Clear chat"
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20"
               aria-label="Close"
             >
               <X className="w-5 h-5" />

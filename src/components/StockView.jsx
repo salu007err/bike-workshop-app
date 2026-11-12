@@ -142,31 +142,30 @@ export default function StockView({
         </button>
       </div>
 
-      {/* 2. HERO INVENTORY VALUATION CARD (TOTAL STOCK WORTH) */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-4 sm:p-5 border border-slate-800 shadow-md">
-        {/* Glow Effects */}
-        <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
-        <div className="absolute -left-12 -bottom-12 w-40 h-40 rounded-full bg-blue-500/15 blur-3xl pointer-events-none" />
+      {/* 2. HERO INVENTORY VALUATION CARD (LIGHT & MODERN) */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50 via-white to-emerald-50 p-4 sm:p-5 border-2 border-blue-200 shadow-sm">
+        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-blue-100/60 blur-2xl pointer-events-none" />
+        <div className="absolute -left-10 -bottom-10 w-36 h-36 rounded-full bg-emerald-100/60 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           {/* Main Worth Display */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-black uppercase tracking-wider">
-                <Coins className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-black uppercase tracking-wider">
+                <Coins className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
                 <span>{t.stock.totalStockWorth}</span>
               </span>
-              <span className="text-[11px] text-slate-400 font-medium">
+              <span className="text-[11px] text-slate-500 font-medium">
                 ({t.stock.holdingValue})
               </span>
             </div>
 
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight font-sans drop-shadow-xs">
+              <span className="text-3xl sm:text-4xl font-black text-emerald-700 tracking-tight font-sans">
                 ₹{totalStockWorth.toLocaleString('en-IN')}
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-300 font-medium mt-0.5">
+            <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5">
               {lang === 'ml'
                 ? `കൈവശമുള്ള ${totalStockUnits.toLocaleString('en-IN')} യൂണിറ്റ് പാർട്സുകളുടെ ആകെ മൂല്യം`
                 : `Total valuation across ${totalStockUnits.toLocaleString('en-IN')} physical units currently on shelf`}
@@ -174,37 +173,37 @@ export default function StockView({
           </div>
 
           {/* Micro Metrics Row */}
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 flex-shrink-0">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-blue-200 flex-shrink-0">
             {/* Units on shelf */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-1.5 border border-white/10">
-              <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
+            <div className="bg-white rounded-2xl px-3 py-1.5 border border-blue-200 shadow-sm">
+              <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                 {t.stock.totalStockUnits}
               </div>
-              <div className="text-base sm:text-lg font-black text-white flex items-center gap-1">
-                <Package className="w-4 h-4 text-blue-300" />
+              <div className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1">
+                <Package className="w-4 h-4 text-blue-600" />
                 <span>{totalStockUnits.toLocaleString('en-IN')}</span>
               </div>
             </div>
 
             {/* Part Varieties */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-1.5 border border-white/10">
-              <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
+            <div className="bg-white rounded-2xl px-3 py-1.5 border border-blue-200 shadow-sm">
+              <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                 {t.stock.partTypes}
               </div>
-              <div className="text-base sm:text-lg font-black text-white flex items-center gap-1">
-                <Hash className="w-3.5 h-3.5 text-indigo-300" />
+              <div className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1">
+                <Hash className="w-3.5 h-3.5 text-indigo-600" />
                 <span>{parts.length}</span>
               </div>
             </div>
 
             {/* Health Status pill */}
-            <div className="col-span-2 sm:col-span-1 bg-white/10 backdrop-blur-md rounded-2xl px-3 py-1.5 border border-white/10 flex items-center justify-between sm:flex-col sm:items-start">
-              <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">
+            <div className="col-span-2 sm:col-span-1 bg-white rounded-2xl px-3 py-1.5 border border-blue-200 shadow-sm flex items-center justify-between sm:flex-col sm:items-start">
+              <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                 {lang === 'ml' ? 'സ്റ്റോക്ക് നില' : 'Stock Status'}
               </div>
               {outCount === 0 && lowCount === 0 ? (
-                <div className="text-xs sm:text-sm font-black text-emerald-400 flex items-center gap-1 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="text-xs sm:text-sm font-black text-emerald-700 flex items-center gap-1 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{t.stock.healthyStock}</span>
                 </div>
               ) : (
@@ -212,18 +211,18 @@ export default function StockView({
                   {outCount > 0 && (
                     <button
                       onClick={() => setFilterType('out')}
-                      className="text-[10px] font-black bg-red-500/30 text-red-300 hover:bg-red-500/50 px-2 py-0.5 rounded-lg border border-red-500/40 cursor-pointer active:scale-95 transition-all flex items-center gap-1"
+                      className="text-[10px] font-black bg-red-50 text-red-700 hover:bg-red-100 px-2 py-0.5 rounded-lg border border-red-200 cursor-pointer active:scale-95 transition-all flex items-center gap-1"
                     >
-                      <AlertTriangle className="w-3 h-3 text-red-400" />
+                      <AlertTriangle className="w-3 h-3 text-red-500" />
                       <span>{outCount} {lang === 'ml' ? 'തീർന്നു' : 'Out'}</span>
                     </button>
                   )}
                   {lowCount > 0 && (
                     <button
                       onClick={() => setFilterType('low')}
-                      className="text-[10px] font-black bg-amber-500/30 text-amber-300 hover:bg-amber-500/50 px-2 py-0.5 rounded-lg border border-amber-500/40 cursor-pointer active:scale-95 transition-all flex items-center gap-1"
+                      className="text-[10px] font-black bg-amber-50 text-amber-800 hover:bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-200 cursor-pointer active:scale-95 transition-all flex items-center gap-1"
                     >
-                      <AlertTriangle className="w-3 h-3 text-amber-400" />
+                      <AlertTriangle className="w-3 h-3 text-amber-500" />
                       <span>{lowCount} {lang === 'ml' ? 'കുറവ്' : 'Low'}</span>
                     </button>
                   )}
