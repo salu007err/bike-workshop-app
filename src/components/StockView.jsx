@@ -457,11 +457,31 @@ export default function StockView({
                   </div>
 
                   {/* Actions Group (Thumb-friendly touch targets) */}
-                  <div className="flex items-center gap-1.5">
-                    {/* Fast +Stock Button */}
+                  <div className="flex items-center gap-1 sm:gap-1.5">
+                    {/* Direct 1-tap fast increments */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => onAddStock(part.id, 1)}
+                        className="px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-black rounded-lg border border-slate-200 active:scale-95 transition-all shadow-2xs cursor-pointer"
+                        title="Add 1 to stock"
+                      >
+                        +1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onAddStock(part.id, 5)}
+                        className="px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-black rounded-lg border border-slate-200 active:scale-95 transition-all shadow-2xs cursor-pointer"
+                        title="Add 5 to stock"
+                      >
+                        +5
+                      </button>
+                    </div>
+
+                    {/* Fast +Stock Button (Opens full modal) */}
                     <button
                       onClick={() => setQuickStockPart(part)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
                       title={t.stock.addStock}
                     >
                       <PackagePlus className="w-4 h-4 stroke-[2.5]" />

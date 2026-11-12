@@ -119,47 +119,49 @@ export default function InvoiceDetailModal({
           </div>
         )}
 
-        {/* 2. QUICK ACTIONS BAR (MOBILE POLISHED) */}
-        <div className="bg-slate-50 border-b border-slate-200 p-3 sm:p-4 no-print flex-shrink-0 space-y-2">
-          <div className={`grid ${!isCancelled && onEditInvoice ? 'grid-cols-4' : 'grid-cols-3'} gap-1.5 sm:gap-2`}>
-            {/* WhatsApp Button (Primary Green) */}
-            <button
-              onClick={() => setShowPhonePrompt(!showPhonePrompt)}
-              className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] sm:text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
-            >
-              <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-              <span className="truncate">WhatsApp</span>
-            </button>
+        {/* 2. QUICK ACTIONS BAR (MOBILE POLISHED & HIGH IMPACT) */}
+        <div className="bg-slate-50 border-b border-slate-200 p-3 sm:p-4 no-print flex-shrink-0 space-y-2.5">
+          {/* Big WhatsApp Action Button */}
+          <button
+            onClick={() => setShowPhonePrompt(!showPhonePrompt)}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-sm sm:text-base shadow-md shadow-emerald-500/25 active:scale-98 transition-all cursor-pointer"
+          >
+            <Share2 className="w-5 h-5 stroke-[2.5] flex-shrink-0" />
+            <span>{lang === 'ml' ? 'വാട്സാപ്പിൽ അയക്കുക (WhatsApp Share)' : 'Share on WhatsApp'}</span>
+          </button>
 
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {/* Download PDF (Blue) */}
             <button
               onClick={handleDownload}
-              className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] sm:text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-              <span>PDF</span>
+              <Download className="w-4 h-4 flex-shrink-0" />
+              <span>{lang === 'ml' ? 'ഡൗൺലോഡ്' : 'PDF'}</span>
             </button>
-
-            {/* Edit Invoice Button (Amber) */}
-            {!isCancelled && onEditInvoice && (
-              <button
-                onClick={() => onEditInvoice(invoice)}
-                className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-sm transition-all cursor-pointer"
-                title={t.invoiceDetail.editInvoice}
-              >
-                <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span className="truncate">{lang === 'ml' ? 'മാറ്റുക' : 'Edit'}</span>
-              </button>
-            )}
 
             {/* Print Button (Dark) */}
             <button
               onClick={handlePrint}
-              className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1.5 sm:px-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-[11px] sm:text-xs active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-black text-xs active:scale-95 transition-all cursor-pointer"
             >
-              <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-              <span className="truncate">{lang === 'ml' ? 'പ്രിന്റ്' : 'Print'}</span>
+              <Printer className="w-4 h-4 flex-shrink-0" />
+              <span>{lang === 'ml' ? 'പ്രിന്റ്' : 'Print'}</span>
             </button>
+
+            {/* Edit Invoice Button (Amber) */}
+            {!isCancelled && onEditInvoice ? (
+              <button
+                onClick={() => onEditInvoice(invoice)}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-xs shadow-xs transition-all cursor-pointer"
+                title={t.invoiceDetail.editInvoice}
+              >
+                <Edit2 className="w-4 h-4 flex-shrink-0" />
+                <span>{lang === 'ml' ? 'മാറ്റുക' : 'Edit'}</span>
+              </button>
+            ) : (
+              <div />
+            )}
           </div>
 
           {/* Optional Phone Number Prompt for Direct WhatsApp Click-to-Chat */}

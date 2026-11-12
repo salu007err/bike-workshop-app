@@ -52,16 +52,16 @@ export default function Navbar({
             <Sparkles className="w-2.5 h-2.5 text-amber-300 hidden sm:inline" />
           </button>
 
-          {/* Language Switcher Pill */}
+          {/* Language Switcher Pill - Prominent Emerald Button */}
           <button
             onClick={onToggleLanguage}
-            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-extrabold text-[11px] sm:text-xs border border-slate-700 transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs border border-emerald-500 shadow-sm transition-all cursor-pointer"
             title={lang === 'en' ? 'മലയാളത്തിലേക്ക് മാറ്റുക' : 'Switch to English'}
             aria-label="Toggle Language"
           >
-            <Globe className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-            <span className="text-emerald-400 font-extrabold">
-              {lang === 'en' ? 'മലയാളം' : 'ENG'}
+            <Globe className="w-4 h-4 text-emerald-100 flex-shrink-0" />
+            <span className="tracking-wide">
+              {lang === 'en' ? 'മലയാളം' : 'ENGLISH'}
             </span>
           </button>
 
