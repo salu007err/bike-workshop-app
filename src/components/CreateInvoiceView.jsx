@@ -25,7 +25,6 @@ import {
 import { fuzzyFilter } from '../services/searchUtils';
 import { searchCommonBikeParts } from '../services/commonBikeParts';
 import { searchBikeModels, QUICK_POPULAR_MODELS } from '../services/commonBikeModels';
-import { COMMON_WORKSHOP_SERVICES } from '../services/commonServices';
 import ImageViewModal from './ImageViewModal';
 
 export default function CreateInvoiceView({
@@ -282,23 +281,6 @@ export default function CreateInvoiceView({
 
     setWorkDescription('');
     setWorkPrice('');
-    setError('');
-  };
-
-  // 1-Tap Quick Service Addition (Zero Typing required for mechanics)
-  const handleQuickAddService = (srv) => {
-    const desc = lang === 'ml' ? srv.nameMl : srv.nameEn;
-    setItems((prev) => [
-      ...prev,
-      {
-        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        part_id: null,
-        description: desc,
-        quantity: 1,
-        price: srv.price,
-        item_type: 'work',
-      },
-    ]);
     setError('');
   };
 
@@ -1032,56 +1014,18 @@ export default function CreateInvoiceView({
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
               <span className="leading-snug font-medium">
                 {lang === 'ml'
-                  ? 'കസ്റ്റമർ സ്വന്തമായി പാർട്ട് കൊണ്ടുവന്നതാണോ? ഇവിടെ ഫിറ്റിംഗ് കൂലി മാത്രം നൽകി ബിൽ ചെയ്യാം.'
-                  : 'Customer brought own parts? Just add the fitting labour charge here for a labour-only bill.'}
+                  ? 'കസ്റ്റമർ സ്വന്തമായി പാർട്ട് കൊണ്ടുവന്നതാണോ? ഇവിടെ ഫിറ്റിംഗ് കൂലി നൽകി ബിൽ ചെയ്യാം.'
+                  : 'Customer brought own parts? Add the fitting labour charge here for a labour-only bill.'}
               </span>
             </div>
 
-            {/* 1-Tap Quick Common Services Grid (ZERO typing needed for low-literacy mechanics) */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  <span>
-                    {lang === 'ml'
-                      ? '⚡ പെട്ടെന്ന് ചേർക്കാവുന്ന പണികൾ (1-Tap):'
-                      : '⚡ 1-Tap Quick Services (No typing):'}
-                  </span>
-                </span>
-                <span className="text-[10px] font-bold text-slate-400">
-                  {lang === 'ml' ? 'തൊട്ടാൽ ഉടൻ ബില്ലിൽ ചേരും' : 'Tap to add instantly'}
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-800">
+                  {lang === 'ml' ? 'പണിയും കൂലിയും ചേർക്കുക:' : 'Add Work & Labour Charge:'}
                 </span>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {COMMON_WORKSHOP_SERVICES.map((srv) => (
-                  <button
-                    key={srv.id}
-                    type="button"
-                    onClick={() => handleQuickAddService(srv)}
-                    className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border-2 border-emerald-200 text-left transition-all active:scale-95 cursor-pointer flex items-center justify-between gap-1.5 shadow-2xs group"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-base flex-shrink-0">{srv.emoji}</span>
-                        <span className="text-xs sm:text-sm font-black text-slate-800 truncate group-hover:text-emerald-900 leading-tight">
-                          {lang === 'ml' ? srv.nameMl.split('(')[0].trim() : srv.nameEn}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white font-black text-xs flex-shrink-0 shadow-2xs">
-                      ₹{srv.price}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Divider: Or custom service description */}
-            <div className="pt-2 border-t border-slate-200">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                {lang === 'ml' ? 'അല്ലെങ്കിൽ മറ്റു പ്രത്യേക പണികൾ ടൈപ്പ് ചെയ്യുക:' : 'Or type custom service:'}
-              </span>
 
               <form onSubmit={handleAddWork} className="space-y-2.5">
                 <div>

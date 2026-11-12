@@ -18,7 +18,7 @@ const GEMINI_MODELS = [
   'gemini-3.5-flash-lite',
   'gemini-3.5-flash',
   'gemini-flash-latest',
-  'gemini-2.5-flash',
+  'gemini-3.1-flash-lite',
 ];
 
 /**
@@ -419,6 +419,7 @@ Provide a direct, practical, and highly helpful answer. If it's a bike mechanica
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptContext }] }],
         }),
@@ -444,6 +445,9 @@ Provide a direct, practical, and highly helpful answer. If it's a bike mechanica
             error: 'invalid_key',
             message: errJson?.error?.message,
           };
+        }
+        if (response.status === 503 || response.status === 429) {
+          await new Promise((r) => setTimeout(r, 600));
         }
       }
     } catch (fetchErr) {
