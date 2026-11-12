@@ -504,14 +504,28 @@ export default function CreateInvoiceView({
         </div>
       )}
 
-      {/* 2. STEP 1: VEHICLE REGISTRATION NUMBER, OPTIONAL MODEL & OPTIONAL KM READING */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Vehicle Registration Number */}
-          <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1">
-              {t.createInvoice.vehicleLabel} <span className="text-red-500">*</span>
-            </label>
+      {/* 2. STEP 1: VEHICLE REGISTRATION NUMBER (NUMBER PLATE STYLE), MODEL & KM */}
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs">
+            1
+          </span>
+          <h3 className="text-base sm:text-lg font-black text-slate-900">
+            {lang === 'ml' ? 'വണ്ടി വിവരങ്ങൾ (Bike Details)' : 'Customer Vehicle Details'}
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {/* Vehicle Registration Number Plate */}
+          <div className="bg-amber-50/70 p-3.5 rounded-2xl border-2 border-amber-300 shadow-2xs">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-black uppercase tracking-wider text-amber-950">
+                {t.createInvoice.vehicleLabel} <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[10px] text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md font-black uppercase">
+                {lang === 'ml' ? 'നിർബന്ധം' : 'Required'}
+              </span>
+            </div>
             <input
               type="text"
               required
@@ -520,18 +534,18 @@ export default function CreateInvoiceView({
               spellCheck="false"
               value={vehicleNumber}
               onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-              placeholder={t.createInvoice.vehiclePlaceholder}
-              className="w-full text-base sm:text-lg font-black uppercase tracking-wider px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
+              placeholder={t.createInvoice.vehiclePlaceholder || 'KL 07 CD 1234'}
+              className="w-full text-xl sm:text-2xl font-black uppercase tracking-wider px-4 py-3 rounded-xl border-2 border-amber-400 focus:border-amber-600 focus:bg-white bg-white text-slate-900 transition-colors placeholder:text-slate-300 shadow-xs"
             />
           </div>
 
           {/* Vehicle Model Name (Optional with Autocomplete) */}
           <div className="relative" ref={modelAutocompleteRef}>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-600 truncate">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 truncate">
                 {t.createInvoice.modelLabel || 'Vehicle Model'}
               </label>
-              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
                 {t.createInvoice.optional || 'Optional'}
               </span>
             </div>
@@ -545,16 +559,16 @@ export default function CreateInvoiceView({
                 }}
                 onFocus={() => setShowModelSuggestions(true)}
                 placeholder={t.createInvoice.modelPlaceholder || 'e.g. Activa, Pulsar, Dio...'}
-                className="w-full text-sm sm:text-base font-bold px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-blue-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
+                className="w-full text-base sm:text-lg font-bold px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-blue-600 focus:bg-white bg-slate-50 text-slate-900 transition-colors placeholder:text-slate-300"
               />
               {vehicleModel && (
                 <button
                   type="button"
                   onClick={() => setVehicleModel('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600"
                   aria-label="Clear model"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -642,47 +656,56 @@ export default function CreateInvoiceView({
         </div>
       </div>
 
-      {/* 3. STEP 2: ADD ITEMS (TABBED PICKER: STOCK vs OUTSIDE PART vs LABOUR) */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
-        {/* Sub-tabs: Workshop Stock vs Outside Purchased Part vs Labour */}
-        <div className="grid grid-cols-3 gap-1 sm:gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
+      {/* 3. STEP 2: ADD ITEMS (TABBED PICKER: LABOUR vs SHOP STOCK vs OUTSIDE PART) */}
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs">
+            2
+          </span>
+          <h3 className="text-base sm:text-lg font-black text-slate-900">
+            {lang === 'ml' ? 'പണികളും പാർട്സുകളും ചേർക്കുക' : 'Add Work & Spare Parts'}
+          </h3>
+        </div>
+
+        {/* 3 Master Segment Buttons */}
+        <div className="grid grid-cols-3 gap-2 bg-slate-100 p-2 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => setItemTypeTab('work')}
+            className={`py-3 px-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              itemTypeTab === 'work'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            <Wrench className="w-4 h-4 stroke-[2.5]" />
+            <span className="truncate">{lang === 'ml' ? 'പണിക്കൂലി' : 'Labour'}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setItemTypeTab('stock')}
-            className={`py-2 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`py-3 px-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               itemTypeTab === 'stock'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            <Package className="w-3.5 h-3.5 stroke-[2.2] flex-shrink-0" />
-            <span className="truncate">{t.createInvoice.tabStockPart || 'Stock Part'}</span>
+            <Package className="w-4 h-4 stroke-[2.5]" />
+            <span className="truncate">{lang === 'ml' ? 'കടയിലെ പാർട്ട്' : 'Shop Part'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setItemTypeTab('outside')}
-            className={`py-2 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`py-3 px-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               itemTypeTab === 'outside'
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            <ShoppingCart className="w-3.5 h-3.5 stroke-[2.2] flex-shrink-0" />
-            <span className="truncate">{t.createInvoice.tabOutsidePart || 'Outside Part'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setItemTypeTab('work')}
-            className={`py-2 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
-              itemTypeTab === 'work'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Wrench className="w-3.5 h-3.5 stroke-[2.2] flex-shrink-0" />
-            <span className="truncate">{t.createInvoice.tabWork || 'Labour'}</span>
+            <ShoppingCart className="w-4 h-4 stroke-[2.5]" />
+            <span className="truncate">{lang === 'ml' ? 'പുറത്തുനിന്ന്' : 'Outside Part'}</span>
           </button>
         </div>
 
@@ -1117,16 +1140,21 @@ export default function CreateInvoiceView({
       </div>
 
       {/* 4. STEP 3: CURRENT BILL ITEMS LIST */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
-            {t.createInvoice.currentItems} ({items.length})
-          </h3>
+          <div className="flex items-center gap-2">
+            <span className="w-7 h-7 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xs">
+              3
+            </span>
+            <h3 className="text-base sm:text-lg font-black text-slate-900">
+              {lang === 'ml' ? 'ബില്ലിലെ ഇനങ്ങൾ' : 'Bill Items'} ({items.length})
+            </h3>
+          </div>
           {items.length > 0 && (
             <button
               type="button"
               onClick={() => setItems([])}
-              className="text-xs font-bold text-red-600 hover:text-red-700 cursor-pointer"
+              className="text-xs font-black text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl border border-red-200 cursor-pointer transition-colors"
             >
               {t.createInvoice.clearAll}
             </button>
