@@ -351,12 +351,12 @@ export default function StockView({
               >
                 {/* Top Row: Thumbnail + Part Name + Part Number + Price */}
                 <div className="flex items-start gap-2.5 justify-between">
-                  {/* Image Thumbnail with Direct Click-to-View */}
+                  {/* Image Thumbnail with Direct Click-to-View (Extra Large for Low-Literacy Recognition) */}
                   {part.image_url ? (
                     <button
                       type="button"
                       onClick={() => setViewImagePart(part)}
-                      className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-blue-200 flex-shrink-0 bg-slate-100 group cursor-pointer shadow-xs active:scale-95 transition-all"
+                      className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-blue-400 flex-shrink-0 bg-slate-100 group cursor-pointer shadow-sm active:scale-95 transition-all"
                       title={lang === 'ml' ? 'ഫോട്ടോ വലുതായി കാണുക' : 'Click to view photo'}
                     >
                       <img
@@ -365,24 +365,32 @@ export default function StockView({
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                       />
                       <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                        <Eye className="w-4 h-4 text-white drop-shadow" />
+                        <Eye className="w-5 h-5 text-white drop-shadow" />
                       </div>
                     </button>
                   ) : (
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Package className="w-5 h-5 text-slate-400" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(part)}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 hover:bg-slate-200 border-2 border-dashed border-slate-300 text-slate-400 hover:text-slate-600 flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-all cursor-pointer"
+                      title={lang === 'ml' ? 'ഫോട്ടോ ചേർക്കുക' : 'Add photo'}
+                    >
+                      <ImageIcon className="w-6 h-6 text-slate-400" />
+                      <span className="text-[10px] font-bold mt-1 text-slate-500">
+                        {lang === 'ml' ? '+ ഫോട്ടോ' : '+ Photo'}
+                      </span>
+                    </button>
                   )}
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <h3 className="font-extrabold text-slate-900 text-sm sm:text-base leading-snug">
+                      <h3 className="font-black text-slate-900 text-base sm:text-lg leading-snug">
                         {part.name}
                       </h3>
                       {/* Part Number Badge */}
                       {part.part_number && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/70 text-[10px] font-mono font-bold tracking-tight">
-                          <Hash className="w-2.5 h-2.5" />
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-mono font-bold tracking-tight">
+                          <Hash className="w-3 h-3" />
                           <span>{part.part_number}</span>
                         </span>
                       )}
@@ -391,17 +399,17 @@ export default function StockView({
                         <button
                           type="button"
                           onClick={() => setViewImagePart(part)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 text-[10px] font-black cursor-pointer active:scale-95"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 text-xs font-black cursor-pointer active:scale-95 shadow-2xs"
                           title={lang === 'ml' ? 'ഫോട്ടോ വലുതായി കാണുക' : 'View photo'}
                         >
-                          <Eye className="w-3 h-3 text-blue-700" />
+                          <Eye className="w-3.5 h-3.5 text-blue-700" />
                           <span>{lang === 'ml' ? 'ഫോട്ടോ കാണുക' : 'View Photo'}</span>
                         </button>
                       )}
                     </div>
 
                     {part.note && (
-                      <p className="text-xs text-slate-400 mt-0.5 font-medium line-clamp-1">
+                      <p className="text-xs text-slate-500 mt-1 font-medium line-clamp-1">
                         {part.note}
                       </p>
                     )}
@@ -412,74 +420,51 @@ export default function StockView({
                     <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
                       {lang === 'ml' ? 'ഒരു പീസ്' : 'Unit Price'}
                     </div>
-                    <div className="font-black text-slate-900 text-base sm:text-lg leading-tight">
+                    <div className="font-black text-slate-900 text-lg sm:text-xl leading-tight">
                       ₹{(parseFloat(part.price) || 0).toFixed(0)}
                     </div>
-                    <div className="mt-1 inline-block px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[10px] font-black tracking-tight">
+                    <div className="mt-1 inline-block px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-black text-xs tracking-tight shadow-2xs">
                       {t.stock.itemWorth}: ₹{(qty * (parseFloat(part.price) || 0)).toLocaleString('en-IN')}
                     </div>
                   </div>
                 </div>
 
                 {/* Bottom Row: Stock Badge + Quick Actions */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100 gap-1.5">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
                   {/* Stock Quantity Badge */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black ${
                         isOutOfStock
-                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          ? 'bg-red-50 text-red-700 border-2 border-red-200'
                           : isLowStock
-                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                          : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          ? 'bg-amber-50 text-amber-800 border-2 border-amber-200'
+                          : 'bg-emerald-50 text-emerald-800 border-2 border-emerald-200'
                       }`}
                     >
                       {isOutOfStock ? (
                         <>
-                          <AlertTriangle className="w-3 h-3 text-red-500" />
+                          <AlertTriangle className="w-4 h-4 text-red-500 stroke-[2.5]" />
                           <span>{t.stock.outOfStock}</span>
                         </>
                       ) : (
                         <>
                           <span>{qty} {t.stock.inStock}</span>
-                          {isLowStock && <span className="text-[10px] text-amber-600 font-black">!</span>}
+                          {isLowStock && <span className="text-xs text-amber-600 font-black">!</span>}
                         </>
                       )}
                     </span>
-
-                    {/* View Image Button if part has image, or Add Photo shortcut */}
-                    {part.image_url ? (
-                      <button
-                        type="button"
-                        onClick={() => setViewImagePart(part)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs text-xs font-black cursor-pointer transition-all"
-                        title={lang === 'ml' ? 'ഫോട്ടോ വലുതായി കാണുക' : 'View photo'}
-                      >
-                        <Eye className="w-3.5 h-3.5 text-white" />
-                        <span>{lang === 'ml' ? 'ഫോട്ടോ കാണുക' : 'View Photo'}</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(part)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 border border-slate-200 text-[11px] font-bold cursor-pointer transition-all"
-                        title={lang === 'ml' ? 'ഫോട്ടോ ചേർക്കുക' : 'Add photo'}
-                      >
-                        <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{lang === 'ml' ? '+ ഫോട്ടോ' : '+ Photo'}</span>
-                      </button>
-                    )}
                   </div>
 
                   {/* Actions Group (Thumb-friendly touch targets) */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     {/* Fast +Stock Button */}
                     <button
                       onClick={() => setQuickStockPart(part)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
                       title={t.stock.addStock}
                     >
-                      <PackagePlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <PackagePlus className="w-4 h-4 stroke-[2.5]" />
                       <span>{t.stock.addStock}</span>
                     </button>
 

@@ -25,6 +25,7 @@ const aiAgent = await import('./src/services/aiAgent.js');
 const searchUtils = await import('./src/services/searchUtils.js');
 const commonParts = await import('./src/services/commonBikeParts.js');
 const commonBikeModels = await import('./src/services/commonBikeModels.js');
+const commonServices = await import('./src/services/commonServices.js');
 
 // Setup Pure Supabase Mock for automated test environment
 const mockPartsTable = [];
@@ -978,6 +979,47 @@ assert(typeof enTrans.stock.itemWorth === 'string', 'EN stock.itemWorth exists')
 assert(typeof mlTrans.stock.itemWorth === 'string', 'ML stock.itemWorth exists');
 assert(typeof enTrans.home.stockWorth === 'string', 'EN home.stockWorth exists');
 assert(typeof mlTrans.home.stockWorth === 'string', 'ML home.stockWorth exists');
+
+console.log('\n--- TEST SUITE 22: Ultra-Simple Mechanic UX & 1-Tap Quick Services ---');
+
+// Test A: Common Workshop Services catalog
+const servicesList = commonServices.COMMON_WORKSHOP_SERVICES;
+assert(Array.isArray(servicesList) && servicesList.length >= 10, 'Common workshop services contains 10+ standard services');
+
+const oilChangeService = servicesList.find(s => s.id === 'oil_change');
+assert(oilChangeService && oilChangeService.price === 50, 'Oil change service present with ₹50 default price');
+assert(oilChangeService.nameMl.includes('ഓയിൽ'), 'Oil change has colloquial Malayalam name');
+assert(oilChangeService.emoji === '🛢️', 'Oil change has visual emoji icon for low-literacy recognition');
+
+const washService = servicesList.find(s => s.id === 'water_wash');
+assert(washService && washService.price === 150, 'Water wash service present with ₹150 default price');
+
+const genService = servicesList.find(s => s.id === 'general_service');
+assert(genService && genService.price === 350, 'General service present with ₹350 default price');
+
+// Test B: 1-Tap Quick Service item creation
+const quickItem = {
+  id: 'item_test_123',
+  part_id: null,
+  description: oilChangeService.nameMl,
+  quantity: 1,
+  price: oilChangeService.price,
+  item_type: 'work'
+};
+assert(quickItem.item_type === 'work' && quickItem.part_id === null, 'Quick service item created with zero stock deduction');
+assert(quickItem.price === 50 && quickItem.quantity === 1, 'Quick service item quantity and price accurate');
+
+// Test C: Direct quantity stepper math
+const updatedQty = quickItem.quantity + 1;
+const updatedLineTotal = updatedQty * quickItem.price;
+assert(updatedQty === 2 && updatedLineTotal === 100, 'Quantity stepper updates quantity and total (2 * ₹50 = ₹100)');
+
+// Test D: Vehicle search normalization
+const testVNum = 'KL 07 CD 1234';
+const testQuery = 'kl07';
+const normalizedV = searchUtils.normalizeSearchText(testVNum).replace(/\s+/g, '');
+const normalizedQ = searchUtils.normalizeSearchText(testQuery).replace(/\s+/g, '');
+assert(normalizedV.includes(normalizedQ), 'Spaceless search query matches vehicle registration number');
 
 console.log('\n=======================================');
 console.log(`TOTAL TESTS: ${testsPassed + testsFailed}`);

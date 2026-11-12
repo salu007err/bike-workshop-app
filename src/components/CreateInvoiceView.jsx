@@ -23,6 +23,7 @@ import {
 import { fuzzyFilter } from '../services/searchUtils';
 import { searchCommonBikeParts } from '../services/commonBikeParts';
 import { searchBikeModels, QUICK_POPULAR_MODELS } from '../services/commonBikeModels';
+import { COMMON_WORKSHOP_SERVICES } from '../services/commonServices';
 import ImageViewModal from './ImageViewModal';
 import { Eye } from 'lucide-react';
 
@@ -280,6 +281,53 @@ export default function CreateInvoiceView({
 
     setWorkDescription('');
     setWorkPrice('');
+    setError('');
+  };
+
+  // 1-Tap Quick Service Addition (Zero Typing required for mechanics)
+  const handleQuickAddService = (srv) => {
+    const desc = lang === 'ml' ? srv.nameMl : srv.nameEn;
+    setItems((prev) => [
+      ...prev,
+      {
+        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        part_id: null,
+        description: desc,
+        quantity: 1,
+        price: srv.price,
+        item_type: 'work',
+      },
+    ]);
+    setError('');
+  };
+
+  // Direct quantity increment/decrement on bill items
+  const handleUpdateItemQuantity = (index, delta) => {
+    setItems((prev) => {
+      const next = [...prev];
+      const item = next[index];
+      const newQty = (item.quantity || 1) + delta;
+      if (newQty <= 0) {
+        return prev.filter((_, i) => i !== index);
+      }
+      if (item.item_type === 'part' && item.part_id) {
+        const part = parts.find((p) => String(p.id) === String(item.part_id));
+        if (part) {
+          const previouslyInEdit = editingInvoice?.items
+            ? editingInvoice.items
+                .filter((it) => String(it.part_id) === String(item.part_id))
+                .reduce((s, it) => s + (parseInt(it.quantity, 10) || 0), 0)
+            : 0;
+          const maxAvailable = (part.quantity || 0) + previouslyInEdit;
+          if (newQty > maxAvailable) {
+            setError(`${t.createInvoice.errPartStockPrefix} "${item.description}": ${maxAvailable}`);
+            return prev;
+          }
+        }
+      }
+      next[index] = { ...item, quantity: newQty };
+      return next;
+    });
     setError('');
   };
 
@@ -954,68 +1002,117 @@ export default function CreateInvoiceView({
 
         {/* TAB C: ADD WORK / LABOR */}
         {itemTypeTab === 'work' && (
-          <form onSubmit={handleAddWork} className="space-y-2.5">
+          <div className="space-y-3.5">
             {/* Friendly explanation notice for customer-supplied parts */}
-            <div className="p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-950 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span className="leading-snug">
+            <div className="p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl text-emerald-950 text-xs sm:text-sm flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <span className="leading-snug font-medium">
                 {lang === 'ml'
                   ? 'കസ്റ്റമർ സ്വന്തമായി പാർട്ട് കൊണ്ടുവന്നതാണോ? ഇവിടെ ഫിറ്റിംഗ് കൂലി മാത്രം നൽകി ബിൽ ചെയ്യാം.'
                   : 'Customer brought own parts? Just add the fitting labour charge here for a labour-only bill.'}
               </span>
             </div>
 
-            <div>
-              <input
-                type="text"
-                value={workDescription}
-                onChange={(e) => setWorkDescription(e.target.value)}
-                placeholder={t.createInvoice.workDescPlaceholder}
-                className="w-full text-xs sm:text-sm font-bold px-3.5 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-emerald-500 focus:outline-none placeholder:text-slate-400"
-              />
+            {/* 1-Tap Quick Common Services Grid (ZERO typing needed for low-literacy mechanics) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>
+                    {lang === 'ml'
+                      ? '⚡ പെട്ടെന്ന് ചേർക്കാവുന്ന പണികൾ (1-Tap):'
+                      : '⚡ 1-Tap Quick Services (No typing):'}
+                  </span>
+                </span>
+                <span className="text-[10px] font-bold text-slate-400">
+                  {lang === 'ml' ? 'തൊട്ടാൽ ഉടൻ ബില്ലിൽ ചേരും' : 'Tap to add instantly'}
+                </span>
+              </div>
 
-              {/* Suggestion Chips */}
-              <div className="mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                {t.suggestions.map((sug) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {COMMON_WORKSHOP_SERVICES.map((srv) => (
                   <button
-                    key={sug}
+                    key={srv.id}
                     type="button"
-                    onClick={() => setWorkDescription(sug)}
-                    className="text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 whitespace-nowrap transition-colors cursor-pointer active:scale-95 flex-shrink-0"
+                    onClick={() => handleQuickAddService(srv)}
+                    className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border-2 border-emerald-200 text-left transition-all active:scale-95 cursor-pointer flex items-center justify-between gap-1.5 shadow-2xs group"
                   >
-                    + {sug}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base flex-shrink-0">{srv.emoji}</span>
+                        <span className="text-xs sm:text-sm font-black text-slate-800 truncate group-hover:text-emerald-900 leading-tight">
+                          {lang === 'ml' ? srv.nameMl.split('(')[0].trim() : srv.nameEn}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white font-black text-xs flex-shrink-0 shadow-2xs">
+                      ₹{srv.price}
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 min-w-0">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
-                  ₹
-                </span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="any"
-                  value={workPrice}
-                  onChange={(e) => setWorkPrice(e.target.value)}
-                  placeholder="e.g. 150"
-                  className="w-full text-base font-black pl-7 pr-3 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
+            {/* Divider: Or custom service description */}
+            <div className="pt-2 border-t border-slate-200">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                {lang === 'ml' ? 'അല്ലെങ്കിൽ മറ്റു പ്രത്യേക പണികൾ ടൈപ്പ് ചെയ്യുക:' : 'Or type custom service:'}
+              </span>
 
-              <button
-                type="submit"
-                disabled={!workDescription.trim() || !workPrice}
-                className="py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap"
-              >
-                <Plus className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
-                <span>{t.createInvoice.addWorkBtn}</span>
-              </button>
+              <form onSubmit={handleAddWork} className="space-y-2.5">
+                <div>
+                  <input
+                    type="text"
+                    value={workDescription}
+                    onChange={(e) => setWorkDescription(e.target.value)}
+                    placeholder={t.createInvoice.workDescPlaceholder}
+                    className="w-full text-xs sm:text-sm font-bold px-3.5 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-emerald-500 focus:outline-none placeholder:text-slate-400"
+                  />
+
+                  {/* Suggestion Chips */}
+                  <div className="mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                    {t.suggestions.map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => setWorkDescription(sug)}
+                        className="text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 whitespace-nowrap transition-colors cursor-pointer active:scale-95 flex-shrink-0"
+                      >
+                        + {sug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      value={workPrice}
+                      onChange={(e) => setWorkPrice(e.target.value)}
+                      placeholder="e.g. 150"
+                      className="w-full text-base font-black pl-7 pr-3 py-2.5 rounded-xl border-2 border-slate-200 bg-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={!workDescription.trim() || !workPrice}
+                    className="py-2.5 sm:py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer flex-shrink-0 whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4 stroke-[2.5] flex-shrink-0" />
+                    <span>{t.createInvoice.addWorkBtn}</span>
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
+          </div>
         )}
       </div>
 
@@ -1057,17 +1154,17 @@ export default function CreateInvoiceView({
                   className="py-2.5 flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug truncate">
+                    <div className="font-black text-slate-900 text-sm sm:text-base leading-snug truncate">
                       {item.description}
                     </div>
-                    <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span
-                        className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                        className={`font-black px-2 py-0.5 rounded-md text-[10px] tracking-wide uppercase ${
                           item.item_type === 'part' && item.part_id
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
                             : item.item_type === 'part' && !item.part_id
-                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                         }`}
                       >
                         {item.item_type === 'part' && item.part_id
@@ -1076,8 +1173,32 @@ export default function CreateInvoiceView({
                           ? (t.createInvoice.itemColOutsidePart || (lang === 'ml' ? 'പുറത്തുനിന്ന്' : 'Outside Part'))
                           : (t.createInvoice.itemColWork || (lang === 'ml' ? 'പണിക്കൂലി' : 'Labour'))}
                       </span>
-                      <span>
-                        {item.quantity} × ₹{parseFloat(item.price).toFixed(0)}
+
+                      {/* Direct Inline Quantity Stepper */}
+                      <div className="inline-flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQuantity(idx, -1)}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-white hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-black shadow-2xs cursor-pointer"
+                          title="Decrease"
+                        >
+                          -
+                        </button>
+                        <span className="text-xs font-black px-1.5 min-w-[20px] text-center text-slate-900">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQuantity(idx, 1)}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-white hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-black shadow-2xs cursor-pointer"
+                          title="Increase"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <span className="text-xs text-slate-500 font-bold">
+                        × ₹{parseFloat(item.price).toFixed(0)}
                       </span>
                     </div>
                   </div>

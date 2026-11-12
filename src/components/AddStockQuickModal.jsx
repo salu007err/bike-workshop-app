@@ -103,14 +103,18 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t
             />
 
             {/* Quick Presets for fast 1-tap additions */}
-            <div className="grid grid-cols-4 gap-1.5 mt-2">
-              {[1, 5, 10, 20].map((num) => (
+            <div className="grid grid-cols-6 gap-1.5 mt-2.5">
+              {[1, 2, 5, 10, 20, 50].map((num) => (
                 <button
                   key={num}
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => handlePreset(num)}
-                  className="py-1.5 px-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:opacity-40"
+                  className={`py-2 px-1 text-center font-black text-xs sm:text-sm rounded-xl border-2 transition-all cursor-pointer active:scale-95 disabled:opacity-40 ${
+                    addQty === String(num)
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                      : 'bg-slate-100 hover:bg-emerald-50 text-slate-800 border-slate-200'
+                  }`}
                 >
                   +{num}
                 </button>
@@ -119,11 +123,14 @@ export default function AddStockQuickModal({ isOpen, onClose, part, onConfirm, t
           </div>
 
           {parsedAdd > 0 && (
-            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-xs font-bold text-emerald-800">
-              {t.quickStockModal.newTotalLabel}{' '}
-              <strong className="text-sm font-black text-emerald-900">
-                {newTotal} {t.quickStockModal.units}
-              </strong>
+            <div className="p-3 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center space-y-1">
+              <div className="text-xs text-emerald-800 font-bold">
+                {currentStock} {t.quickStockModal.units} + <span className="font-black text-emerald-900">+{parsedAdd}</span>
+              </div>
+              <div className="text-base font-black text-emerald-950">
+                {t.quickStockModal.newTotalLabel}{' '}
+                <span className="text-xl text-emerald-600 font-black">{newTotal}</span> {t.quickStockModal.units}
+              </div>
             </div>
           )}
 
